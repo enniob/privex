@@ -9,8 +9,11 @@ export class WebsocketService {
   private socket$: WebSocketSubject<any>;
 
   constructor() {
-    // Connect to the WebSocket server
-    this.socket$ = webSocket('ws://localhost:4300'); // Replace with your WebSocket server URL
+    this.socket$ = webSocket('ws://localhost:4300');
+  }
+
+  connect(url: string) {
+    this.socket$ = webSocket(url);
 
     // Log connection status
     this.socket$.subscribe({
@@ -30,7 +33,7 @@ export class WebsocketService {
     return this.socket$.asObservable().pipe(
       catchError((error) => {
         console.error('WebSocket error:', error);
-        return of(null); // Return an empty observable to keep the stream alive
+        return of(null);
       })
     );
   }

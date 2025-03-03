@@ -8,6 +8,7 @@ export class ChatService {
   private webSocketService = inject(WebsocketService);
 
   selectedUser = signal<string | null>(null);
+  userDetails = signal<{ name: string; ip: string; port: string } | null>(null);
   callSign = signal<string>('Anonymous');
   chatHistory = signal<{ [key: string]: { sender: string; content: string }[] }>({});
 
@@ -19,6 +20,14 @@ export class ChatService {
 
   selectUser(user: string) {
     this.selectedUser.set(user);
+  }
+
+  setUserDetails(name: string, ip: string, port: string) {
+    this.userDetails.set({ name, ip, port });
+  }
+
+  getUserDetails() {
+    return this.userDetails();
   }
 
   // Method to send a message

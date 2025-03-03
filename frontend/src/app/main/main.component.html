@@ -1,0 +1,61 @@
+<div class="chat-container">
+  <!-- User List -->
+  <mat-card class="user-list">
+    <mat-card-header>
+      <mat-card-title>Users</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <mat-list>
+        <mat-list-item *ngFor="let user of users" (click)="selectUser(user)">
+          {{ user.callSign }} ({{ user.ip }}:{{ user.port }})
+        </mat-list-item>
+      </mat-list>
+      <button mat-raised-button color="primary" (click)="openAddUserDialog()">
+        <mat-icon>add</mat-icon> Add User
+      </button>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Chat Window -->
+  <mat-card class="chat-window">
+    <mat-card-header>
+      <mat-card-title>
+        {{ selectedUser ? `Chat with ${selectedUser.callSign}` : 'Chat' }}
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div *ngIf="selectedUser; else noUserSelected" class="messages">
+        <div *ngFor="let message of messages" class="message">
+          <strong>{{ message.sender }}:</strong> {{ message.content }}
+        </div>
+      </div>
+      <ng-template #noUserSelected>
+        <div class="no-user-selected">
+          <mat-icon>chat</mat-icon>
+          <p>Select a user to start chatting or add a new user.</p>
+        </div>
+      </ng-template>
+
+      <!-- Message Input -->
+      <div class="message-input">
+        <mat-form-field appearance="outline" class="full-width">
+          <input
+            matInput
+            [(ngModel)]="newMessage"
+            placeholder="Type a message..."
+            (keyup.enter)="sendMessage()"
+            [disabled]="!selectedUser"
+          />
+        </mat-form-field>
+        <button
+          mat-icon-button
+          color="primary"
+          (click)="sendMessage()"
+          [disabled]="!selectedUser"
+        >
+          <mat-icon>send</mat-icon>
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

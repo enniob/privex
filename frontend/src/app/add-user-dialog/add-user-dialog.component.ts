@@ -3,12 +3,12 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-add-user-dialog',
-  standalone: true,
-  imports: [ CommonModule, ReactiveFormsModule, MatDialogModule, MatInputModule, MatButtonModule ],
+  imports: [ CommonModule, ReactiveFormsModule, MatDialogModule, MatInputModule, MatButtonModule, MatFormFieldModule ],
   templateUrl: './add-user-dialog.component.html',
   styleUrls: ['./add-user-dialog.component.scss'],
 })
@@ -22,18 +22,24 @@ export class AddUserDialogComponent {
   ) {
     this.userForm = this.fb.group({
       callSign: ['', Validators.required],
-      ip: ['', [Validators.required, Validators.pattern('^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$')]],
+      ip: [
+        '',
+        [
+          Validators.required,
+          Validators.pattern('^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'),
+        ],
+      ],
       port: ['', [Validators.required, Validators.min(1), Validators.max(65535)]],
     });
   }
 
   onAdd() {
     if (this.userForm.valid) {
-      this.dialogRef.close(this.userForm.value); // Return the form data
+      this.dialogRef.close(this.userForm.value);
     }
   }
 
   onCancel() {
-    this.dialogRef.close(); // Close the dialog without saving
+    this.dialogRef.close();
   }
 }

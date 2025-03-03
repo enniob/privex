@@ -17,11 +17,9 @@ const wss = new WebSocketServer({ server });
 
 const nodes = new Map<string, Node>();
 
-wss.on('connection', (ws: WebSocket) => {
-    console.log('New client connected');
-
-    ws.on('message', (message: string) => {
-        const data = JSON.parse(message);
+wss.on('connection', (ws: WebSocket, req) => {
+  ws.on('message', (message: string) => {
+      const data = JSON.parse(message);
 
         if (data.type === 'register') {
             const { callSign, ip, port } = data;
@@ -67,3 +65,15 @@ wss.on('connection', (ws: WebSocket) => {
         }
     });
 });
+
+/**
+ * Helper function to get the client's IP address.
+ */
+function getClientIp(req: any): string {
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (forwardedFor) {
+    return forwardedFor.split(',')[0].trim();
+  }
+
+  return req.socket.remoteAddress;
+}

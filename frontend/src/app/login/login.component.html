@@ -1,0 +1,45 @@
+<div class="login-container">
+  <mat-card class="login-card">
+    <mat-card-header>
+      <mat-card-title>Login</mat-card-title>
+      <mat-card-subtitle>Enter your details to join the chat</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Your Name</mat-label>
+          <input matInput formControlName="name" placeholder="Enter your name" />
+          <mat-error *ngIf="loginForm.get('name')?.hasError('required')">
+            Name is required
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>IP Address</mat-label>
+          <input matInput formControlName="ip" placeholder="Enter IP address" />
+          <mat-error *ngIf="loginForm.get('ip')?.hasError('required')">
+            IP address is required
+          </mat-error>
+          <mat-error *ngIf="loginForm.get('ip')?.hasError('pattern')">
+            Please enter a valid IP address
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Port</mat-label>
+          <input matInput formControlName="port" placeholder="Enter port number" />
+          <mat-error *ngIf="loginForm.get('port')?.hasError('required')">
+            Port is required
+          </mat-error>
+          <mat-error *ngIf="loginForm.get('port')?.hasError('min') || loginForm.get('port')?.hasError('max')">
+            Port must be between 1 and 65535
+          </mat-error>
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" type="submit" [disabled]="loginForm.invalid">
+          Login
+        </button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>
