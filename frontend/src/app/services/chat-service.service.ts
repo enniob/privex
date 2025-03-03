@@ -30,7 +30,6 @@ export class ChatService {
     return this.userDetails();
   }
 
-  // Method to send a message
   sendMessage(user: string, message: string) {
     const payload = {
       type: 'message',
@@ -38,7 +37,9 @@ export class ChatService {
       recipient: user,
       content: message,
     };
-    this.webSocketService.sendMessage(payload);
+
+    // ✅ Fix: Use sendMessageToPeer() instead of sendMessage()
+    this.webSocketService.sendMessageToPeer(user, payload);
 
     // Update local chat history
     const history = this.chatHistory();
@@ -49,6 +50,7 @@ export class ChatService {
     }
     this.chatHistory.set({ ...history });
   }
+
 
   private handleIncomingMessage(message: any) {
     if (message?.type === 'message') {
