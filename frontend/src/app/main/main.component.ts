@@ -39,28 +39,50 @@ export class MainComponent implements OnInit {
   newMessage = '';
 
   ngOnInit(): void {
-    if (!this.userDetails) {
+    if (!this.userDetails?.name || !this.userDetails?.ip || !this.userDetails?.port) {
+      console.error("User details are missing, redirecting to login.");
       this.router.navigate(['/login']);
+      return;
     }
 
-    this.webSocketService.sendMessage({
+    // ✅ Ensure user details exist before registering
+    this.webSocketService.sendMessageToPeer(this.userDetails.name, {
       type: 'register',
-      callSign: this.userDetails?.name,
-      ip: this.userDetails?.ip,
-      port: this.userDetails?.port
+      callSign: this.userDetails.name,
+      ip: this.userDetails.ip,
+      port: this.userDetails.port,
     });
 
-    // Listen for incoming messages
+    // Listen for peer updates
     this.webSocketService.receiveMessages().subscribe((message) => {
+      console.log("Received WebSocket message:", message);
+
       if (message.type === 'nodes') {
         this.users = message.nodes;
-      } else if (message.type === 'userAdded') {
-        this.users.push(message);
-      } else if (message.type === 'message') {
+      }
+
+      else if (message.type === 'userAdded') {
+        console.log(`New user added: ${message.callSign}`);
+
+        // Avoid duplicate entries
+        if (!this.users.some(user => user.callSign === message.callSign)) {
+          this.users.push(message);
+          this.webSocketService.autoConnectToNewPeer(message);
+        }
+      }
+
+      else if (message.type === 'userRemoved') {
+        console.log(`User disconnected: ${message.callSign}`);
+        this.users = this.users.filter(user => user.callSign !== message.callSign);
+      }
+
+      else if (message.type === 'message') {
         this.messages.push({ sender: message.sender, content: message.content });
       }
     });
   }
+
+
 
   selectUser(user: { callSign: string; ip: string; port: string }) {
     this.selectedUser = user;
@@ -75,7 +97,7 @@ export class MainComponent implements OnInit {
         content: this.newMessage,
         recipient: this.selectedUser.callSign,
       };
-      this.webSocketService.sendMessage(payload);
+      this.webSocketService.sendMessageToPeer(this.selectedUser.callSign, payload);
       this.newMessage = '';
     }
   }
@@ -86,11 +108,18 @@ export class MainComponent implements OnInit {
     });
 
     dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        this.webSocketService.sendMessage({
+      if (result && result.callSign && result.ip && result.port) {
+        console.log(`Adding new user: ${result.callSign} (${result.ip}:${result.port})`);
+
+        // Register new user and notify peers
+        this.webSocketService.sendMessageToPeer(result.callSign, {
           type: 'addUser',
-          ...result,
+          callSign: result.callSign,
+          ip: result.ip,
+          port: result.port,
         });
+      } else {
+        console.warn("Invalid user data received from dialog.");
       }
     });
   }
