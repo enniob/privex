@@ -1,0 +1,5 @@
+<mat-list>
+    <mat-list-item *ngFor="let user of users" (click)="onUserClick(user.callSign)">
+        {{ user.callSign }} ({{ user.ip }}:{{ user.port }})
+    </mat-list-item>
+</mat-list>
