@@ -1,0 +1,84 @@
+/* 1. Reset body & html for full-height flex */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+
+/* 2. Main container spanning full viewport */
+.chat-container {
+  display: flex;
+  height: 100vh;  /* Full browser height */
+  background-color: #f5f5f5;
+}
+
+/* 3. Left panel: user list on top, button on bottom */
+.left-panel {
+  display: flex;
+  flex-direction: column;  /* Stacks user list & button vertically */
+  width: 250px;            /* Fixed width for sidebar */
+  background-color: #ffffff;
+  border-right: 1px solid #e0e0e0;
+}
+
+/* User list area: fills remaining vertical space */
+.user-list {
+  flex: 1;                 /* Grow to fill leftover vertical space */
+  overflow-y: auto;        /* Scroll if user list is long */
+  padding: 16px;
+}
+
+/* Bottom button (pinned to bottom) */
+.bottom-button {
+  padding: 16px;
+  border-top: 1px solid #e0e0e0;
+  text-align: center;
+  /* If you want the button flush at the very bottom:
+     margin-top: auto; or simply rely on the .user-list flex:1
+  */
+}
+
+/* 4. Chat area (right side) */
+.chat-area {
+  flex: 1;                 /* takes remaining horizontal space */
+  display: flex;
+  flex-direction: column;  /* stack chat window & input vertically */
+}
+
+/* Chat window: fill vertical space above input */
+.chat-window {
+  flex: 1;                 /* takes remaining vertical space */
+  overflow-y: auto;        /* scroll if messages are long */
+  background-color: #ffffff;
+  padding: 16px;
+}
+
+/* Simple styling for message bubbles */
+.message-bubble {
+  background-color: #d0e7ff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+/* Message input at bottom of center panel */
+.message-input {
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  background-color: #f5f5f5;
+  border-top: 1px solid #e0e0e0;
+}
+
+.message-input input[type="text"] {
+  flex: 1;                 /* take up as much width as possible */
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}

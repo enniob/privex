@@ -1,0 +1,25 @@
+<div class="chat-container">
+
+  <!-- Left panel: user list (fills most of the column) + settings button at bottom -->
+  <div class="left-panel">
+    <div class="user-list">
+      <app-user-list></app-user-list>
+    </div>
+    <div class="bottom-button">
+      <button mat-icon-button (click)="openSetupDialog()">
+        <mat-icon>settings</mat-icon>
+      </button>
+      <button mat-button (click)="openAddUserDialog()">Add User</button>
+    </div>
+  </div>
+
+  <!-- Center panel: chat window (flexes), input at the bottom -->
+  <div class="chat-area">
+    <div class="chat-window">
+      <app-chat-window></app-chat-window>
+    </div>
+    <div class="message-input">
+      <app-message-input></app-message-input>
+    </div>
+  </div>
+</div>

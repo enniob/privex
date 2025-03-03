@@ -1,0 +1,11 @@
+<h2 mat-dialog-title>Setup</h2>
+<mat-dialog-content>
+    <mat-form-field appearance="outline" class="full-width">
+        <input matInput [(ngModel)]="callSign" placeholder="Enter your callSign" />
+    </mat-form-field>
+    <p><strong>Your IP Address:</strong> {{ ipAddress }}</p>
+</mat-dialog-content>
+<mat-dialog-actions>
+    <button mat-button (click)="onCancel()">Cancel</button>
+    <button mat-button color="primary" (click)="onSave()">Save</button>
+</mat-dialog-actions>
