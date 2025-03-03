@@ -45,7 +45,7 @@ export class MainComponent implements OnInit {
       return;
     }
 
-    // ✅ Ensure user details exist before registering
+    // ✅ Ensure user details are fully available before sending a message
     this.webSocketService.sendMessageToPeer(this.userDetails.name, {
       type: 'register',
       callSign: this.userDetails.name,
@@ -53,14 +53,13 @@ export class MainComponent implements OnInit {
       port: this.userDetails.port,
     });
 
-    // Listen for peer updates
+    // ✅ Listen for peer updates
     this.webSocketService.receiveMessages().subscribe((message) => {
       console.log("Received WebSocket message:", message);
 
       if (message.type === 'nodes') {
         this.users = message.nodes;
       }
-
       else if (message.type === 'userAdded') {
         console.log(`New user added: ${message.callSign}`);
 
@@ -70,19 +69,15 @@ export class MainComponent implements OnInit {
           this.webSocketService.autoConnectToNewPeer(message);
         }
       }
-
       else if (message.type === 'userRemoved') {
         console.log(`User disconnected: ${message.callSign}`);
         this.users = this.users.filter(user => user.callSign !== message.callSign);
       }
-
       else if (message.type === 'message') {
         this.messages.push({ sender: message.sender, content: message.content });
       }
     });
   }
-
-
 
   selectUser(user: { callSign: string; ip: string; port: string }) {
     this.selectedUser = user;

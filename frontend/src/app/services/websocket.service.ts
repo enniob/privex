@@ -38,10 +38,18 @@ export class WebsocketService {
 
   // Send a message to a specific peer
   sendMessageToPeer(peerId: string, message: any) {
-    if (this.sockets[peerId]) {
-      this.sockets[peerId].next(message);
+    if (!this.sockets[peerId]) {
+      console.warn(`No WebSocket connection found for peer ${peerId}, establishing connection...`);
+      this.connectToPeer(`ws://${message.ip}:${message.port}`, peerId); // Ensure connection is established
+      setTimeout(() => {
+        if (this.sockets[peerId]) {
+          this.sockets[peerId].next(message);
+        } else {
+          console.error(`WebSocket connection still not available for peer ${peerId}`);
+        }
+      }, 500); // Wait for connection to establish
     } else {
-      console.error(`No WebSocket connection found for peer ${peerId}`);
+      this.sockets[peerId].next(message);
     }
   }
 
