@@ -56,28 +56,32 @@ export class MainComponent implements OnInit {
     // ✅ Listen for peer updates
     this.webSocketService.receiveMessages().subscribe((message) => {
       console.log("📩 Received WebSocket message:", message);
-
+    
       if (message.type === 'nodes') {
         console.log("🔍 Updating full peer list");
         this.users = message.nodes;
       }
-
+    
       else if (message.type === 'userAdded') {
-        console.log(`🆕 New user added: ${message.callSign}`);
-
+        console.log(`🆕 New user added: ${message.callSign} (${message.ip}:${message.port})`);
+    
         // ✅ Ensure we don't duplicate users
         if (!this.users.some(user => user.callSign === message.callSign)) {
-          this.users.push(message);
-          this.webSocketService.connectToPeer(`ws://${message.ip}:${message.port}`, message.callSign);
+          this.users.push({
+            callSign: message.callSign,
+            ip: message.ip,
+            port: message.port
+          });
+          console.log(`✅ Added ${message.callSign} to the user list.`);
         } else {
           console.warn(`⚠️ User ${message.callSign} already exists in the list.`);
         }
       }
-
+    
       else if (message.type === 'userAddedBy') {
         console.log(`🔗 I was added by ${message.callSign} (${message.ip}:${message.port})`);
-
-        // ✅ Make sure Node A (Ennio) appears in Node B’s user list
+    
+        // ✅ Ensure Node A (Ennio) appears in the list on Node B’s UI
         if (!this.users.some(user => user.callSign === message.callSign)) {
           this.users.push({
             callSign: message.callSign,
@@ -89,17 +93,17 @@ export class MainComponent implements OnInit {
           console.warn(`⚠️ ${message.callSign} is already in the user list.`);
         }
       }
-
+    
       else if (message.type === 'userRemoved') {
         console.log(`❌ User disconnected: ${message.callSign}`);
         this.users = this.users.filter(user => user.callSign !== message.callSign);
       }
-
+    
       else if (message.type === 'message') {
         console.log(`💬 Message received: ${message.content}`);
         this.messages.push({ sender: message.sender, content: message.content });
       }
-    });
+    });    
   }
 
   selectUser(user: { callSign: string; ip: string; port: string }) {
