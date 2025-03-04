@@ -26,7 +26,7 @@ wss.on('connection', (ws: WebSocket) => {
 
       if (callSign && ip && port) {
         nodes.set(callSign, { id: generateId(), callSign, ip, port });
-        connections.set(ws, callSign);
+        connections.set(ws, callSign); // ✅ Store WebSocket connection for this node
         console.log(`✅ Node registered: ${callSign} (${ip}:${port})`);
 
         // Send full node list to new peer
@@ -57,47 +57,50 @@ wss.on('connection', (ws: WebSocket) => {
       if (callSign && ip && port) {
         nodes.set(callSign, { id: generateId(), callSign, ip, port });
 
-        // Identify the node that is adding the new user (Node A)
+        // ✅ Ensure that we can find the node that is adding this user
         const addingNodeCallSign = connections.get(ws);
-        const addingNode = nodes.get(addingNodeCallSign ?? "");
+        if (!addingNodeCallSign) {
+          console.error(`❌ Could not determine who is adding ${callSign}.`);
+          return;
+        }
 
-        if (addingNodeCallSign && addingNode) {
-          console.log(`✅ ${addingNodeCallSign} added ${callSign}`);
+        const addingNode = nodes.get(addingNodeCallSign);
+        if (!addingNode) {
+          console.error(`❌ Adding node (${addingNodeCallSign}) not found.`);
+          return;
+        }
 
-          // Notify the newly added node (Node B)
-          let nodeBWs: WebSocket | undefined;
-          for (const [clientWs, clientCallSign] of connections.entries()) {
-            if (clientCallSign === callSign) {
-              nodeBWs = clientWs;
-              break;
-            }
+        console.log(`✅ ${addingNodeCallSign} is adding ${callSign}`);
+
+        // ✅ Notify Node B (the newly added user) about Node A (who added them)
+        let nodeBWs: WebSocket | undefined;
+        for (const [clientWs, clientCallSign] of connections.entries()) {
+          if (clientCallSign === callSign) {
+            nodeBWs = clientWs;
+            break;
           }
+        }
 
-          if (nodeBWs && nodeBWs.readyState === WebSocket.OPEN) {
-            console.log(`📢 Informing ${callSign} (Node B) about Node A (${addingNodeCallSign})`);
-
-            // Send Node A's info to Node B
-            nodeBWs.send(JSON.stringify({
-              type: 'userAddedBy',
-              callSign: addingNodeCallSign,
-              ip: addingNode.ip,
-              port: addingNode.port
-            }));
-          } else {
-            console.error(`❌ No WebSocket found for ${callSign} (Node B)`);
-          }
-
-          // Confirm to Node A that Node B was added
-          console.log(`✅ Confirming to ${addingNodeCallSign} (Node A) that ${callSign} (Node B) was added`);
-          ws.send(JSON.stringify({
-            type: 'userAdded',
-            callSign,
-            ip,
-            port
+        if (nodeBWs && nodeBWs.readyState === WebSocket.OPEN) {
+          console.log(`📢 Informing ${callSign} about ${addingNodeCallSign}`);
+          nodeBWs.send(JSON.stringify({
+            type: 'userAddedBy',
+            callSign: addingNode.callSign,
+            ip: addingNode.ip,
+            port: addingNode.port
           }));
         } else {
-          console.error(`❌ Could not find the node that added ${callSign}`);
+          console.error(`❌ No WebSocket found for ${callSign}`);
         }
+
+        // ✅ Confirm to Node A that Node B was added
+        console.log(`✅ Confirming to ${addingNodeCallSign} that ${callSign} was added`);
+        ws.send(JSON.stringify({
+          type: 'userAdded',
+          callSign,
+          ip,
+          port
+        }));
       } else {
         console.error(`❌ Invalid user data:`, data);
       }
