@@ -65,7 +65,7 @@ export class MainComponent implements OnInit {
       else if (message.type === 'userAdded') {
         console.log(`🆕 New user added: ${message.callSign} (${message.ip}:${message.port})`);
     
-        // ✅ Ensure we don't duplicate users
+        // ✅ Check if the user is already in the list
         if (!this.users.some(user => user.callSign === message.callSign)) {
           this.users.push({
             callSign: message.callSign,
@@ -80,8 +80,6 @@ export class MainComponent implements OnInit {
     
       else if (message.type === 'userAddedBy') {
         console.log(`🔗 I was added by ${message.callSign} (${message.ip}:${message.port})`);
-    
-        // ✅ Ensure Node A (Ennio) appears in the list on Node B’s UI
         if (!this.users.some(user => user.callSign === message.callSign)) {
           this.users.push({
             callSign: message.callSign,
@@ -103,7 +101,7 @@ export class MainComponent implements OnInit {
         console.log(`💬 Message received: ${message.content}`);
         this.messages.push({ sender: message.sender, content: message.content });
       }
-    });    
+    });      
   }
 
   selectUser(user: { callSign: string; ip: string; port: string }) {
