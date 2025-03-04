@@ -21,6 +21,7 @@ wss.on('connection', (ws: WebSocket) => {
 
     if (data.type === 'register') {
       const { callSign, ip, port } = data;
+      console.log('[DATA --->]', data);
 
       if (callSign && ip && port) {
         nodes.set(callSign, { id: generateId(), callSign, ip, port });
@@ -34,7 +35,7 @@ wss.on('connection', (ws: WebSocket) => {
         // Notify all other peers about this new node
         wss.clients.forEach((client) => {
           if (client !== ws && client.readyState === WebSocket.OPEN) {
-            console.log(`Broadcasting new user ${callSign} to all clients`);
+            console.log(`📢 Broadcasting new user ${callSign} to all clients`);
             client.send(JSON.stringify({
               type: 'userAdded',
               callSign,
@@ -58,16 +59,17 @@ wss.on('connection', (ws: WebSocket) => {
 
       if (callSign && ip && port) {
         nodes.set(callSign, { id: generateId(), callSign, ip, port });
-        console.log(`User added: ${callSign} (${ip}:${port})`);
+        console.log(`➕ User added manually: ${callSign} (${ip}:${port})`);
 
         // Notify all clients about the new user
         wss.clients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN) {
+            console.log(`📢 Broadcasting added user ${callSign}`);
             client.send(JSON.stringify({ type: 'userAdded', callSign, ip, port }));
           }
         });
       } else {
-        console.error('Invalid user data:', data);
+        console.error('❌ Invalid user data:', data);
       }
     }
   });

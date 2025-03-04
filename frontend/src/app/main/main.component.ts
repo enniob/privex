@@ -40,44 +40,50 @@ export class MainComponent implements OnInit {
 
   ngOnInit(): void {
     if (!this.userDetails?.name || !this.userDetails?.ip || !this.userDetails?.port) {
-      console.error("User details are missing, redirecting to login.");
+      console.error("⚠️ User details are missing, redirecting to login.");
       this.router.navigate(['/login']);
       return;
     }
 
-    // ✅ Ensure user details are fully available before sending a message
+    // ✅ Register the user
     this.webSocketService.sendMessageToPeer(this.userDetails.name, {
       type: 'register',
       callSign: this.userDetails.name,
       ip: this.userDetails.ip,
-      port: this.userDetails.port,
+      port: this.userDetails.port
     });
 
     // ✅ Listen for peer updates
     this.webSocketService.receiveMessages().subscribe((message) => {
-      console.log("Received WebSocket message:", message);
+      console.log("📩 Received WebSocket message:", message);
 
       if (message.type === 'nodes') {
+        console.log("🔍 Updating full peer list");
         this.users = message.nodes;
       }
-      else if (message.type === 'userAdded') {
-        console.log(`New user added: ${message.callSign}`);
 
-        // Avoid duplicate entries
+      else if (message.type === 'userAdded') {
+        console.log(`🆕 New user added: ${message.callSign}`);
+
+        // ✅ Ensure we don't duplicate users
         if (!this.users.some(user => user.callSign === message.callSign)) {
           this.users.push(message);
           this.webSocketService.autoConnectToNewPeer(message);
         }
       }
+
       else if (message.type === 'userRemoved') {
-        console.log(`User disconnected: ${message.callSign}`);
+        console.log(`❌ User disconnected: ${message.callSign}`);
         this.users = this.users.filter(user => user.callSign !== message.callSign);
       }
+
       else if (message.type === 'message') {
+        console.log(`💬 Message received: ${message.content}`);
         this.messages.push({ sender: message.sender, content: message.content });
       }
     });
   }
+
 
   selectUser(user: { callSign: string; ip: string; port: string }) {
     this.selectedUser = user;
