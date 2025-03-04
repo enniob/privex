@@ -65,13 +65,13 @@ export class MainComponent implements OnInit {
       else if (message.type === 'userAdded') {
         console.log(`🆕 New user added: ${message.callSign} (${message.ip}:${message.port})`);
     
-        // ✅ Check if the user is already in the list
+        // ✅ Ensure we don't duplicate users
         if (!this.users.some(user => user.callSign === message.callSign)) {
-          this.users.push({
+          this.users = [...this.users, {   // ✅ Force Angular change detection
             callSign: message.callSign,
             ip: message.ip,
             port: message.port
-          });
+          }];
           console.log(`✅ Added ${message.callSign} to the user list.`);
         } else {
           console.warn(`⚠️ User ${message.callSign} already exists in the list.`);
@@ -81,11 +81,11 @@ export class MainComponent implements OnInit {
       else if (message.type === 'userAddedBy') {
         console.log(`🔗 I was added by ${message.callSign} (${message.ip}:${message.port})`);
         if (!this.users.some(user => user.callSign === message.callSign)) {
-          this.users.push({
+          this.users = [...this.users, {
             callSign: message.callSign,
             ip: message.ip,
             port: message.port
-          });
+          }];
           console.log(`✅ Added ${message.callSign} to the user list.`);
         } else {
           console.warn(`⚠️ ${message.callSign} is already in the user list.`);
@@ -101,7 +101,7 @@ export class MainComponent implements OnInit {
         console.log(`💬 Message received: ${message.content}`);
         this.messages.push({ sender: message.sender, content: message.content });
       }
-    });      
+    });    
   }
 
   selectUser(user: { callSign: string; ip: string; port: string }) {
