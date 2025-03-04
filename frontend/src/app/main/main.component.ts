@@ -146,9 +146,6 @@ export class MainComponent implements OnInit {
           senderIp: this.userDetails?.ip,
           senderPort: this.userDetails?.port
         });
-
-        console.log(`🔗 Opening WebSocket connection to ${result.callSign} (${result.ip}:${result.port})`);
-        this.webSocketService.connectToPeer(`ws://${result.ip}:${result.port}`, result.callSign);
       } else {
         console.warn("Invalid user data received from dialog.");
       }
