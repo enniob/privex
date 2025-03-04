@@ -109,21 +109,24 @@ export class MainComponent implements OnInit {
     const dialogRef = this.dialog.open(AddUserDialogComponent, {
       width: '400px',
     });
-
+  
     dialogRef.afterClosed().subscribe((result) => {
       if (result && result.callSign && result.ip && result.port) {
         console.log(`Adding new user: ${result.callSign} (${result.ip}:${result.port})`);
-
-        // Register new user and notify peers
+  
+        // ✅ Send Node A's details along with Node B's
         this.webSocketService.sendMessageToPeer(result.callSign, {
           type: 'addUser',
           callSign: result.callSign,
           ip: result.ip,
           port: result.port,
+          senderCallSign: this.userDetails?.name,
+          senderIp: this.userDetails?.ip,
+          senderPort: this.userDetails?.port
         });
       } else {
         console.warn("Invalid user data received from dialog.");
       }
     });
-  }
+  }  
 }
