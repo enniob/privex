@@ -61,25 +61,33 @@ wss.on('connection', (ws: WebSocket) => {
         nodes.set(callSign, { id: generateId(), callSign, ip, port });
         console.log(`➕ User manually added: ${callSign} (${ip}:${port})`);
 
-        // ✅ Notify ONLY the user who added this peer
-        ws.send(JSON.stringify({ type: 'userAdded', callSign, ip, port }));
+        // ✅ Find the WebSocket connection for the node that added the new peer
+        const addingNodeCallSign = connections.get(ws);
+        const addingNode = nodes.get(addingNodeCallSign ?? "");
 
-        // ✅ Find the WebSocket connection for Node B (the added user)
-        const addedByCallSign = connections.get(ws); // The user who added them
-        const addedByNode = nodes.get(addedByCallSign ?? ""); // The node of the user who added them
+        if (addingNodeCallSign && addingNode) {
+          console.log(`📢 ${addingNodeCallSign} added ${callSign}`);
 
-        if (addedByCallSign && addedByNode) {
+          // ✅ Notify the node that was added
           for (const [clientWs, clientCallSign] of connections.entries()) {
             if (clientCallSign === callSign && clientWs.readyState === WebSocket.OPEN) {
-              console.log(`📢 Informing ${callSign} that they were added by ${addedByCallSign}`);
+              console.log(`📢 Informing ${callSign} about the node that added it: ${addingNodeCallSign}`);
               clientWs.send(JSON.stringify({
-                type: 'userAdded',
-                callSign: addedByCallSign,
-                ip: addedByNode.ip,
-                port: addedByNode.port
+                type: 'userAddedBy',
+                callSign: addingNodeCallSign,
+                ip: addingNode.ip,
+                port: addingNode.port
               }));
             }
           }
+
+          // ✅ Notify the node that did the adding
+          ws.send(JSON.stringify({
+            type: 'userAdded',
+            callSign,
+            ip,
+            port
+          }));
         } else {
           console.error(`❌ Could not find user who added ${callSign}`);
         }
@@ -90,7 +98,7 @@ wss.on('connection', (ws: WebSocket) => {
   });
 
   ws.on('close', () => {
-    const disconnectedCallSign = connections.get(ws); // Get the callSign for the disconnected WebSocket
+    const disconnectedCallSign = connections.get(ws);
 
     if (disconnectedCallSign) {
       nodes.delete(disconnectedCallSign);
