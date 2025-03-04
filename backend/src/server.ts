@@ -89,17 +89,30 @@ wss.on('connection', (ws: WebSocket) => {
         }
 
         // ✅ Confirm to Node A that Node B was added
-        console.log(`✅ Confirming to ${senderCallSign} that ${callSign} was added`);
-        ws.send(JSON.stringify({
-          type: 'userAdded',
-          callSign,
-          ip,
-          port
-        }));
+        let nodeAWs: WebSocket | undefined;
+        for (const [clientWs, clientCallSign] of connections.entries()) {
+          if (clientCallSign === senderCallSign) {
+            nodeAWs = clientWs;
+            break;
+          }
+        }
+
+        if (nodeAWs && nodeAWs.readyState === WebSocket.OPEN) {
+          console.log(`📢 Informing ${senderCallSign} that ${callSign} was added.`);
+          nodeAWs.send(JSON.stringify({
+            type: 'userAdded',
+            callSign,
+            ip,
+            port
+          }));
+        } else {
+          console.error(`❌ No WebSocket found for ${senderCallSign}`);
+        }
       } else {
         console.error(`❌ Invalid addUser data:`, data);
       }
     }
+    
   });
 
   ws.on('close', () => {

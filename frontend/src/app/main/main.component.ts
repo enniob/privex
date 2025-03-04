@@ -74,6 +74,22 @@ export class MainComponent implements OnInit {
         }
       }
 
+      else if (message.type === 'userAddedBy') {
+        console.log(`🔗 I was added by ${message.callSign} (${message.ip}:${message.port})`);
+
+        // ✅ Make sure Node A (Ennio) appears in Node B’s user list
+        if (!this.users.some(user => user.callSign === message.callSign)) {
+          this.users.push({
+            callSign: message.callSign,
+            ip: message.ip,
+            port: message.port
+          });
+          console.log(`✅ Added ${message.callSign} to the user list.`);
+        } else {
+          console.warn(`⚠️ ${message.callSign} is already in the user list.`);
+        }
+      }
+
       else if (message.type === 'userRemoved') {
         console.log(`❌ User disconnected: ${message.callSign}`);
         this.users = this.users.filter(user => user.callSign !== message.callSign);
@@ -85,7 +101,6 @@ export class MainComponent implements OnInit {
       }
     });
   }
-
 
   selectUser(user: { callSign: string; ip: string; port: string }) {
     this.selectedUser = user;
