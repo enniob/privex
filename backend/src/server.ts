@@ -59,15 +59,30 @@ wss.on('connection', (ws: WebSocket) => {
 
       if (callSign && ip && port) {
         nodes.set(callSign, { id: generateId(), callSign, ip, port });
-        console.log(`➕ User added manually: ${callSign} (${ip}:${port})`);
+        console.log(`➕ User manually added: ${callSign} (${ip}:${port})`);
 
-        // Notify all clients about the new user
-        wss.clients.forEach((client) => {
-          if (client.readyState === WebSocket.OPEN) {
-            console.log(`📢 Broadcasting added user ${callSign}`);
-            client.send(JSON.stringify({ type: 'userAdded', callSign, ip, port }));
+        // ✅ Notify ONLY the user who added this peer
+        ws.send(JSON.stringify({ type: 'userAdded', callSign, ip, port }));
+
+        // ✅ Find the WebSocket connection for Node B (the added user)
+        const addedByCallSign = connections.get(ws); // The user who added them
+        const addedByNode = nodes.get(addedByCallSign ?? ""); // The node of the user who added them
+
+        if (addedByCallSign && addedByNode) {
+          for (const [clientWs, clientCallSign] of connections.entries()) {
+            if (clientCallSign === callSign && clientWs.readyState === WebSocket.OPEN) {
+              console.log(`📢 Informing ${callSign} that they were added by ${addedByCallSign}`);
+              clientWs.send(JSON.stringify({
+                type: 'userAdded',
+                callSign: addedByCallSign,
+                ip: addedByNode.ip,
+                port: addedByNode.port
+              }));
+            }
           }
-        });
+        } else {
+          console.error(`❌ Could not find user who added ${callSign}`);
+        }
       } else {
         console.error('❌ Invalid user data:', data);
       }

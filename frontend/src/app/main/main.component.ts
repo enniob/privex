@@ -68,7 +68,9 @@ export class MainComponent implements OnInit {
         // ✅ Ensure we don't duplicate users
         if (!this.users.some(user => user.callSign === message.callSign)) {
           this.users.push(message);
-          this.webSocketService.autoConnectToNewPeer(message);
+          this.webSocketService.connectToPeer(`ws://${message.ip}:${message.port}`, message.callSign);
+        } else {
+          console.warn(`⚠️ User ${message.callSign} already exists in the list.`);
         }
       }
 
