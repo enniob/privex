@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -31,6 +31,7 @@ export class MainComponent implements OnInit {
   private webSocketService = inject(WebsocketService);
   private router = inject(Router);
   private dialog = inject(MatDialog);
+  private changeDetectorRef = inject(ChangeDetectorRef);
 
   userDetails = this.chatService.getUserDetails();
   users: { callSign: string; ip: string; port: string }[] = [];
@@ -56,28 +57,30 @@ export class MainComponent implements OnInit {
     // ✅ Listen for peer updates
     this.webSocketService.receiveMessages().subscribe((message) => {
       console.log("📩 Received WebSocket message:", message);
-    
+
       if (message.type === 'nodes') {
         console.log("🔍 Updating full peer list");
         this.users = message.nodes;
+        this.changeDetectorRef.detectChanges(); // ✅ Force UI update
       }
-    
+
       else if (message.type === 'userAdded') {
         console.log(`🆕 New user added: ${message.callSign} (${message.ip}:${message.port})`);
-    
+
         // ✅ Ensure we don't duplicate users
         if (!this.users.some(user => user.callSign === message.callSign)) {
-          this.users = [...this.users, {   // ✅ Force Angular change detection
+          this.users = [...this.users, {
             callSign: message.callSign,
             ip: message.ip,
             port: message.port
           }];
           console.log(`✅ Added ${message.callSign} to the user list.`);
+          this.changeDetectorRef.detectChanges(); // ✅ Force UI update
         } else {
           console.warn(`⚠️ User ${message.callSign} already exists in the list.`);
         }
       }
-    
+
       else if (message.type === 'userAddedBy') {
         console.log(`🔗 I was added by ${message.callSign} (${message.ip}:${message.port})`);
         if (!this.users.some(user => user.callSign === message.callSign)) {
@@ -87,21 +90,24 @@ export class MainComponent implements OnInit {
             port: message.port
           }];
           console.log(`✅ Added ${message.callSign} to the user list.`);
+          this.changeDetectorRef.detectChanges(); // ✅ Force UI update
         } else {
           console.warn(`⚠️ ${message.callSign} is already in the user list.`);
         }
       }
-    
+
       else if (message.type === 'userRemoved') {
         console.log(`❌ User disconnected: ${message.callSign}`);
         this.users = this.users.filter(user => user.callSign !== message.callSign);
+        this.changeDetectorRef.detectChanges(); // ✅ Force UI update
       }
-    
+
       else if (message.type === 'message') {
         console.log(`💬 Message received: ${message.content}`);
         this.messages.push({ sender: message.sender, content: message.content });
+        this.changeDetectorRef.detectChanges(); // ✅ Force UI update
       }
-    });    
+    });
   }
 
   selectUser(user: { callSign: string; ip: string; port: string }) {
