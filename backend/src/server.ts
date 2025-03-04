@@ -18,70 +18,77 @@ const connections = new Map<WebSocket, string>();
 wss.on('connection', (ws: WebSocket) => {
   ws.on('message', (message: string) => {
     const data = JSON.parse(message);
+    console.log(`📩 Received message: ${JSON.stringify(data)}`);
 
     if (data.type === 'register') {
       const { callSign, ip, port } = data;
-      console.log('[DATA --->]', data);
+      console.log(`[REGISTER] Incoming node registration:`, data);
 
       if (callSign && ip && port) {
         nodes.set(callSign, { id: generateId(), callSign, ip, port });
         connections.set(ws, callSign);
-        console.log(`Node registered: ${callSign} (${ip}:${port})`);
+        console.log(`✅ Node registered: ${callSign} (${ip}:${port})`);
 
         // Send full node list to new peer
         const availableNodes = Array.from(nodes.values());
         ws.send(JSON.stringify({ type: 'nodes', nodes: availableNodes }));
 
-        // Notify all other peers about this new node
+        // Notify all other peers
         wss.clients.forEach((client) => {
           if (client !== ws && client.readyState === WebSocket.OPEN) {
-            console.log(`📢 Broadcasting new user ${callSign} to all clients`);
-            client.send(JSON.stringify({
-              type: 'userAdded',
-              callSign,
-              ip,
-              port
-            }));
+            client.send(JSON.stringify({ type: 'userAdded', callSign, ip, port }));
           }
         });
       } else {
-        console.error(`Invalid registration data: ${JSON.stringify(data)}`);
+        console.error(`❌ Invalid registration data:`, data);
       }
     }
 
     else if (data.type === 'discover') {
+      console.log(`[DISCOVER] Sending node list to requester`);
       const availableNodes = Array.from(nodes.values());
       ws.send(JSON.stringify({ type: 'nodes', nodes: availableNodes }));
     }
 
     else if (data.type === 'addUser') {
       const { callSign, ip, port } = data;
+      console.log(`[ADD USER] Request to add ${callSign} (${ip}:${port})`);
 
       if (callSign && ip && port) {
         nodes.set(callSign, { id: generateId(), callSign, ip, port });
-        console.log(`➕ User manually added: ${callSign} (${ip}:${port})`);
 
-        // ✅ Find the WebSocket connection for the node that added the new peer
+        // Identify the node that is adding the new user (Node A)
         const addingNodeCallSign = connections.get(ws);
         const addingNode = nodes.get(addingNodeCallSign ?? "");
 
         if (addingNodeCallSign && addingNode) {
-          console.log(`📢 ${addingNodeCallSign} added ${callSign}`);
+          console.log(`✅ ${addingNodeCallSign} added ${callSign}`);
 
-          // ✅ Notify the node that was added
+          // Notify the newly added node (Node B)
+          let nodeBWs: WebSocket | undefined;
           for (const [clientWs, clientCallSign] of connections.entries()) {
-            if (clientCallSign === callSign && clientWs.readyState === WebSocket.OPEN) {
-              console.log(`📢 Informing ${callSign} about the node that added it: ${addingNodeCallSign}`);
-              clientWs.send(JSON.stringify({
-                type: 'userAddedBy',
-                callSign: addingNodeCallSign,
-                ip: addingNode.ip,
-                port: addingNode.port
-              }));
+            if (clientCallSign === callSign) {
+              nodeBWs = clientWs;
+              break;
             }
           }
 
-          // ✅ Notify the node that did the adding
+          if (nodeBWs && nodeBWs.readyState === WebSocket.OPEN) {
+            console.log(`📢 Informing ${callSign} (Node B) about Node A (${addingNodeCallSign})`);
+
+            // Send Node A's info to Node B
+            nodeBWs.send(JSON.stringify({
+              type: 'userAddedBy',
+              callSign: addingNodeCallSign,
+              ip: addingNode.ip,
+              port: addingNode.port
+            }));
+          } else {
+            console.error(`❌ No WebSocket found for ${callSign} (Node B)`);
+          }
+
+          // Confirm to Node A that Node B was added
+          console.log(`✅ Confirming to ${addingNodeCallSign} (Node A) that ${callSign} (Node B) was added`);
           ws.send(JSON.stringify({
             type: 'userAdded',
             callSign,
@@ -89,23 +96,22 @@ wss.on('connection', (ws: WebSocket) => {
             port
           }));
         } else {
-          console.error(`❌ Could not find user who added ${callSign}`);
+          console.error(`❌ Could not find the node that added ${callSign}`);
         }
       } else {
-        console.error('❌ Invalid user data:', data);
+        console.error(`❌ Invalid user data:`, data);
       }
     }
   });
 
   ws.on('close', () => {
     const disconnectedCallSign = connections.get(ws);
-
     if (disconnectedCallSign) {
       nodes.delete(disconnectedCallSign);
       connections.delete(ws);
-      console.log(`Node disconnected: ${disconnectedCallSign}`);
+      console.log(`⚠️ Node disconnected: ${disconnectedCallSign}`);
 
-      // Notify all other peers that a user disconnected
+      // Notify all peers about disconnection
       wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(JSON.stringify({ type: 'userRemoved', callSign: disconnectedCallSign }));
