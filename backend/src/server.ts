@@ -54,11 +54,11 @@ wss.on('connection', (ws: WebSocket) => {
       const { callSign, ip, port, senderCallSign, senderIp, senderPort } = data;
       console.log(`[ADD USER] ${senderCallSign} is adding ${callSign} (${ip}:${port})`);
     
-      if (nodes.has(callSign)) {
-        console.warn(`⚠️ Node ${callSign} already exists, sending confirmation to ${senderCallSign}.`);
-      } else {
+      if (!nodes.has(callSign)) {
         nodes.set(callSign, { id: generateId(), callSign, ip, port });
         console.log(`✅ Registered new node: ${callSign} (${ip}:${port})`);
+      } else {
+        console.warn(`⚠️ Node ${callSign} already exists, sending confirmation to ${senderCallSign}.`);
       }
     
       if (!nodes.has(senderCallSign)) {
@@ -66,10 +66,10 @@ wss.on('connection', (ws: WebSocket) => {
         console.log(`✅ Registered sender node: ${senderCallSign} (${senderIp}:${senderPort})`);
       }
     
-      console.log(`📢 Notifying Node B’s UI that ${callSign} was added.`);
+      console.log(`📢 Notifying Node B’s UI that ${senderCallSign} was added.`);
       wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify({ type: 'userAdded', callSign, ip, port }));
+          client.send(JSON.stringify({ type: 'userAdded', callSign: senderCallSign, ip: senderIp, port: senderPort }));
         }
       });
     

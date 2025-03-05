@@ -68,7 +68,8 @@ export class MainComponent implements OnInit {
         console.log(`🆕 New user added: ${message.callSign} (${message.ip}:${message.port})`);
 
         // ✅ Ensure we don't duplicate users
-        if (!this.users.some(user => user.callSign === message.callSign)) {
+        const existingUser = this.users.find(user => user.callSign === message.callSign);
+        if (!existingUser) {
           this.users = [...this.users, {
             callSign: message.callSign,
             ip: message.ip,
@@ -79,6 +80,9 @@ export class MainComponent implements OnInit {
         } else {
           console.warn(`⚠️ User ${message.callSign} already exists in the list.`);
         }
+
+        // ✅ Debugging: Check if UI is receiving the event
+        console.log(`👀 Current Users List:`, this.users);
       }
 
       else if (message.type === 'userAddedBy') {
