@@ -55,49 +55,60 @@ wss.on('connection', (ws: WebSocket) => {
       console.log(`[ADD USER] ${senderCallSign} is adding ${callSign} (${ip}:${port})`);
 
       if (callSign && ip && port && senderCallSign && senderIp && senderPort) {
-        // ✅ Register Node B (Bozzetti)
         if (!nodes.has(callSign)) {
           nodes.set(callSign, { id: generateId(), callSign, ip, port });
           console.log(`✅ Registered new node: ${callSign} (${ip}:${port})`);
         }
 
-        // ✅ Register Node A (Ennio) in its own server
         if (!nodes.has(senderCallSign)) {
           nodes.set(senderCallSign, { id: generateId(), callSign: senderCallSign, ip: senderIp, port: senderPort });
           console.log(`✅ Registered sender node: ${senderCallSign} (${senderIp}:${senderPort})`);
         }
 
-        // ✅ Store WebSocket connection for Node A (Ennio)
         connections.set(ws, senderCallSign);
         console.log(`🔗 Storing WebSocket connection for ${senderCallSign}`);
 
-        // ✅ Notify all local WebSocket clients (including UI)
+        console.log(`🔗 Establishing WebSocket connection from ${senderCallSign} to ${callSign} (${ip}:${port})`);
+        const remoteWs = new WebSocket(`ws://${ip}:${port}`);
+
+        remoteWs.on('open', () => {
+          console.log(`✅ WebSocket connection established between ${senderCallSign} and ${callSign}`);
+          connections.set(remoteWs, callSign);
+          
+          remoteWs.send(JSON.stringify({
+            type: 'register',
+            callSign: senderCallSign,
+            ip: senderIp,
+            port: senderPort
+          }));
+        });
+
+        remoteWs.on('message', (message: any) => {
+          const receivedData = JSON.parse(message);
+          console.log(`📩 Message from ${callSign}:`, receivedData);
+
+          wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify(receivedData));
+            }
+          });
+        });
+
+        remoteWs.on('error', (err) => {
+          console.error(`❌ Error connecting to ${callSign}:`, err);
+        });
+
+        remoteWs.on('close', () => {
+          console.log(`⚠️ Connection to ${callSign} closed.`);
+          nodes.delete(callSign);
+          connections.delete(remoteWs);
+        });
+
         wss.clients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({ type: 'userAdded', callSign, ip, port }));
           }
         });
-
-        // ✅ Send message to Node B (Bozzetti)
-        let nodeBWs: WebSocket | undefined;
-        for (const [clientWs, clientCallSign] of connections.entries()) {
-          if (clientCallSign === callSign) {
-            nodeBWs = clientWs;
-            break;
-          }
-        }
-
-        if (nodeBWs && nodeBWs.readyState === WebSocket.OPEN) {
-          console.log(`📢 Informing ${callSign} about ${senderCallSign}`);
-          nodeBWs.send(JSON.stringify({
-            type: 'userAddedBy',
-            callSign: senderCallSign,
-            ip: senderIp,
-            port: senderPort
-          }));
-        } else {
-          console.error(`❌ No WebSocket connection found for ${callSign}`);
-        }
       } else {
         console.error(`❌ Invalid addUser data:`, data);
       }
@@ -111,7 +122,6 @@ wss.on('connection', (ws: WebSocket) => {
       connections.delete(ws);
       console.log(`⚠️ Node disconnected: ${disconnectedCallSign}`);
 
-      // Notify all peers about disconnection
       wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(JSON.stringify({ type: 'userRemoved', callSign: disconnectedCallSign }));
