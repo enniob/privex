@@ -39,78 +39,6 @@ const log = (...args: any[]) => console.log(`[Node ${nodeId}]`, ...args);
 const logError = (...args: any[]) => console.error(`[Node ${nodeId}]`, ...args);
 
 /**
- * Attempt to establish a WebSocket connection to a peer address.
- * Includes reconnection logic on failure.
- */
-function connectToPeer(address: string) {
-  if (!address) return;
-  log(`Attempting to connect to peer at ${address} ...`);
-  try {
-    const ws = new WebSocket(address);
-
-    // Mark this connection as an outgoing attempt and store target address
-    (ws as any).isOutgoing = true;
-    (ws as any).address = address;
-    (ws as any).handshakeSent = false;
-    
-    // Event: Connection opened (outgoing)
-    ws.on('open', () => {
-      log(`Connected to peer at ${address} (outgoing connection)`);
-      
-      const registerMessage = JSON.stringify({
-        type: 'register',
-        nodeId,
-        callSign,
-        ip: nodeIp,
-        port: nodePort
-      });
-
-      ws.send(registerMessage);
-      log(`Sent register message to ${address}: ${registerMessage}`);
-
-      // Send handshake with this node's ID as soon as connection opens
-      // if (!(ws as any).handshakeSent) {
-      //   const handshakeMsg = JSON.stringify({ type: 'handshake', id: nodeId });
-      //   ws.send(handshakeMsg);
-      //   (ws as any).handshakeSent = true;
-      //   log(`Sent handshake to ${address} with node ID ${nodeId}`);
-      // }
-    });
-
-    // Event: Message received from peer
-    ws.on('message', (data) => handleMessage(ws, data));
-
-    // Event: Connection closed
-    ws.on('close', (code, reason) => {
-      const peerId = (ws as any).peerId;
-      const addr = (ws as any).address;
-      log(`Connection closed (code=${code}) ${peerId ? "with peer " + peerId : "from " + addr}. ${reason || ''}`);
-      // Remove from peer map if present
-      if (peerId && peers.get(peerId)?.ws === ws) {
-        peers.delete(peerId);
-        log(`Removed peer ${peerId} from active list`);
-      }
-      // If this was an outgoing connection, schedule reconnection
-      if ((ws as any).isOutgoing && addr) {
-        log(`Scheduling reconnect to ${addr} in 5 seconds...`);
-        setTimeout(() => {
-          connectToPeer(addr);
-        }, 5000);
-      }
-    });
-
-    // Event: Error on the connection
-    ws.on('error', (err) => {
-      logError(`WebSocket error on connection to ${address}:`, err);
-      try { ws.close(); } catch (e) { /* ignore if already closed */ }
-    });
-
-  } catch (err) {
-    logError(`Failed to connect to ${address}:`, err);
-  }
-}
-
-/**
  * Registers the node when a user logs in. 
  */
 function registerNode(msg: any) {
@@ -208,6 +136,14 @@ function handleMessage(ws: WebSocket, data: WebSocket.RawData) {
         peers.set(peerAddress, { ws, callSign: msg.peerCallSign });
         log(`Peer connection established with ${msg.peerCallSign}`);
       }
+
+      broadCastToUI({
+        type: 'peerConfirmed',
+        peerCallSign: msg.peerCallSign,
+        peerIp: msg.peerIp,
+        peerPort: msg.peerPort
+      }, ws);
+
       break;
     }
 
@@ -233,15 +169,30 @@ function handleMessage(ws: WebSocket, data: WebSocket.RawData) {
   // }
 }
 
+function broadCastToUI(msg: any, ws: any) {
+  msg = JSON.stringify(msg);
+
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN && client !== ws) {
+      client.send(msg);
+    }
+  });
+
+  log(`Broadcasted to UI: ${msg}`);
+}
+
 // Listen for incoming WebSocket connections (peer nodes connecting to this node)
 wss.on('connection', (ws, req) => {
   const clientAddr = `${req.socket.remoteAddress}:${req.socket.remotePort}`;
+
   (ws as any).isOutgoing = false;
   (ws as any).address = clientAddr;
   (ws as any).handshakeSent = false;
   log(`New incoming connection from ${clientAddr}`);
+
   // Set up message, close, error handlers for the incoming socket
   ws.on('message', (data) => handleMessage(ws, data));
+
   ws.on('close', (code, reason) => {
     const peerId = (ws as any).peerId;
     log(`Peer connection closed (code=${code}) ${peerId ? "for peer " + peerId : "from " + clientAddr}. ${reason || ''}`);
@@ -251,6 +202,7 @@ wss.on('connection', (ws, req) => {
     }
     // We do not actively reconnect to incoming peers; assume they will reconnect if needed
   });
+
   ws.on('error', (err) => {
     logError(`Error on connection from ${clientAddr}:`, err);
     try { ws.close(); } catch {}  // Ensure socket is closed on error
@@ -261,9 +213,4 @@ wss.on('connection', (ws, req) => {
 // Start the HTTP + WebSocket server
 server.listen(PORT, () => {
   log(`Express server listening on port ${PORT}`);
-  // Initiate connections to any initial peers specified
-  // if (initialPeers.length > 0) {
-  //   log(`Initializing connections to configured peers: ${initialPeers.join(', ')}`);
-  //   initialPeers.forEach(addr => connectToPeer(addr.trim()));
-  // }
 });
