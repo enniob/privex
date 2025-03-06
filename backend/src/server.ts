@@ -156,17 +156,6 @@ function handleMessage(ws: WebSocket, data: WebSocket.RawData) {
       log(`Received message: ${msg}`);
     }
   }
-  
-
-  // Handle other message types (application-specific messages)
-  // if ((ws as any).peerId) {
-  //   log(`Received message from peer ${(ws as any).peerId}:`, msg);
-  //   // Process application message as needed.
-  //   // For example, broadcast to other peers or perform some action.
-  //   // (This section can be customized based on the application's protocol)
-  // } else {
-  //   log(`Received message before handshake was complete, ignoring.`);
-  // }
 }
 
 function broadCastToUI(msg: any, ws: any) {
