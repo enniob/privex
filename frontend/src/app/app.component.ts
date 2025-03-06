@@ -20,11 +20,29 @@ export class AppComponent implements OnInit {
   userDetails = this.chatService.getUserDetails();
 
   ngOnInit(): void {
-    if (this.userDetails?.ip) {
+    if (this.userDetails?.name && this.userDetails?.ip) {
+      console.log(`🔄 Restoring WebSocket connection for ${this.userDetails.name}`);
+      
       this.webSocketService.connect();
-      this.router.navigate(['/chat']);
+  
+      const checkConnection = setInterval(() => {
+        if (this.webSocketService['isConnected']) {
+          clearInterval(checkConnection);
+  
+          this.webSocketService.sendMessage({
+            type: 'register',
+            callSign: this.userDetails?.name,
+            ip: this.userDetails?.ip,
+            port: this.userDetails?.port
+          });
+  
+          console.log(`✅ WebSocket re-registered for ${this.userDetails?.name}`);
+          this.router.navigate(['/chat']);
+        }
+      }, 500);
     } else {
+      console.log("⚠️ No user details found. Redirecting to login.");
       this.router.navigate(['/login']);
     }
-  }
+  }  
 }

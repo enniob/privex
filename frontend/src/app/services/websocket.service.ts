@@ -1,72 +1,58 @@
 import { Injectable } from '@angular/core';
-import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
 })
 export class WebsocketService {
-  private socket!: WebSocketSubject<any>;
-  private serverUrl = `ws://${window.location.hostname}:4300`;
-  private isConnected = new BehaviorSubject<boolean>(false); // Track connection status
-
-  constructor() {
-    this.connect(); // Ensure connection on service initialization
-  }
+  private socket: WebSocket | null = null;
+  private isConnected = false;
+  private messageSubject = new Subject<any>();
 
   connect() {
-    console.log(`🔌 Connecting to WebSocket server at: ${this.serverUrl}`);
-    
-    this.socket = webSocket(this.serverUrl);
+    if (this.isConnected) return;
 
-    this.socket.subscribe({
-      next: (message) => {
-        console.log("📩 Message received from server:", message);
-        this.isConnected.next(true); // Mark as connected
-      },
-      error: (error) => {
-        console.error("❌ WebSocket server error:", error);
-        this.isConnected.next(false); // Mark as disconnected
-        setTimeout(() => this.connect(), 3000); // Retry connection after 3 seconds
-      },
-      complete: () => {
-        console.log("⚠️ WebSocket server connection closed, attempting reconnect...");
-        this.isConnected.next(false);
-        setTimeout(() => this.connect(), 3000); // Retry connection
-      },
-    });
+    const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
+    if (!userDetails?.ip || !userDetails?.port) {
+      console.error('❌ No user details found, cannot connect to WebSocket.');
+      return;
+    }
+
+    const wsUrl = `ws://${userDetails.ip}:${userDetails.port}`;
+    console.log(`🔌 Connecting to WebSocket server at: ${wsUrl}`);
+
+    this.socket = new WebSocket(wsUrl);
+
+    this.socket.onopen = () => {
+      console.log('✅ WebSocket connection established.');
+      this.isConnected = true;
+    };
+
+    this.socket.onclose = () => {
+      console.warn('⚠️ WebSocket connection closed.');
+      this.isConnected = false;
+      setTimeout(() => this.connect(), 3000); // Retry after 3s
+    };
+
+    this.socket.onerror = (error) => {
+      console.error('❌ WebSocket error:', error);
+    };
+
+    this.socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      this.messageSubject.next(data);
+    };
   }
 
   sendMessage(message: any) {
-    if (this.socket && this.isConnected.value) {
-      console.log(`📤 Sending message to server:`, message);
-      this.socket.next(message);
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify(message));
     } else {
-      console.error(`❌ WebSocket connection is not open, attempting to reconnect...`);
-      this.connect();
+      console.warn('❌ WebSocket not open, message not sent.');
     }
   }
 
   receiveMessages(): Observable<any> {
-    return new Observable((observer) => {
-      this.socket.subscribe({
-        next: (message) => {
-          console.log("📩 Received WebSocket message from server:", message);
-          observer.next(message);
-        },
-        error: (error) => {
-          console.error("❌ WebSocket error:", error);
-          observer.error(error);
-        }
-      });
-    });
-  }
-
-  closeConnection() {
-    if (this.socket) {
-      console.log("🔌 Closing WebSocket connection...");
-      this.socket.complete();
-      this.isConnected.next(false);
-    }
+    return this.messageSubject.asObservable();
   }
 }

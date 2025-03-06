@@ -13,9 +13,16 @@ export class ChatService {
   chatHistory = signal<{ [key: string]: { sender: string; content: string }[] }>({});
 
   constructor() {
-    this.webSocketService.receiveMessages().subscribe((message) => {
+    this.webSocketService.receiveMessages().subscribe((message: any) => {
       this.handleIncomingMessage(message);
     });
+
+    // Restore user details from localStorage
+    const savedUser = JSON.parse(localStorage.getItem('userDetails') || 'null');
+    if (savedUser) {
+      this.userDetails.set(savedUser);
+      this.callSign.set(savedUser.name);
+    }
   }
 
   selectUser(user: string) {
@@ -23,14 +30,22 @@ export class ChatService {
   }
 
   setUserDetails(name: string, ip: string, port: string) {
-    this.userDetails.set({ name, ip, port });
+    const userData = { name, ip, port };
+    this.userDetails.set(userData);
+    this.callSign.set(name);
+    localStorage.setItem('userDetails', JSON.stringify(userData));
   }
 
   getUserDetails() {
-    return this.userDetails();
+    return this.userDetails(); // ✅ Fixed: Now correctly returns the object
   }
 
   sendMessage(user: string, message: string) {
+    if (!this.webSocketService) {
+      console.error('❌ WebSocket service is not initialized.');
+      return;
+    }
+
     const payload = {
       type: 'message',
       sender: this.callSign(),
@@ -38,10 +53,8 @@ export class ChatService {
       content: message,
     };
 
-    // ✅ Fix: Now sending messages to `server.ts` instead of directly to peers
     this.webSocketService.sendMessage(payload);
 
-    // ✅ Update local chat history
     const history = this.chatHistory();
     if (history[user]) {
       history[user].push({ sender: this.callSign(), content: message });

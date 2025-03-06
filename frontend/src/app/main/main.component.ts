@@ -45,7 +45,9 @@ export class MainComponent implements OnInit {
       this.router.navigate(['/login']);
       return;
     }
-
+  
+    console.log(`🚀 Registering user: ${this.userDetails.name}`);
+  
     // ✅ Register the user only with the local server (not with peers)
     this.webSocketService.sendMessage({
       type: 'register',
@@ -53,20 +55,28 @@ export class MainComponent implements OnInit {
       ip: this.userDetails.ip,
       port: this.userDetails.port
     });
-
+  
+    // ✅ Ensure the user sees themselves on the UI after registration
+    this.users = [...this.users, {
+      callSign: this.userDetails.name,
+      ip: this.userDetails.ip,
+      port: this.userDetails.port
+    }];
+    this.changeDetectorRef.detectChanges();
+  
     // ✅ Listen for peer updates from the WebSocket server
     this.webSocketService.receiveMessages().subscribe((message) => {
       console.log("📩 Received WebSocket message:", message);
-
+  
       if (message.type === 'nodes') {
         console.log("🔍 Updating full peer list");
         this.users = message.nodes;
         this.changeDetectorRef.detectChanges(); // ✅ Force UI update
       }
-
+  
       else if (message.type === 'userAdded' || message.type === 'userAddedBy') {
         console.log(`🆕 New user added: ${message.callSign} (${message.ip}:${message.port})`);
-
+  
         const existingUser = this.users.find(user => user.callSign === message.callSign);
         if (!existingUser) {
             this.users = [...this.users, {
@@ -83,20 +93,20 @@ export class MainComponent implements OnInit {
         // ✅ Debugging: Check if UI is receiving the event
         console.log(`👀 Current Users List:`, this.users);
       }
-
+  
       else if (message.type === 'userRemoved') {
         console.log(`❌ User disconnected: ${message.callSign}`);
         this.users = this.users.filter(user => user.callSign !== message.callSign);
         this.changeDetectorRef.detectChanges(); // ✅ Force UI update
       }
-
+  
       else if (message.type === 'message') {
         console.log(`💬 Message received: ${message.content}`);
         this.messages.push({ sender: message.sender, content: message.content });
         this.changeDetectorRef.detectChanges(); // ✅ Force UI update
       }
     });
-  }
+  }  
 
   selectUser(user: { callSign: string; ip: string; port: string }) {
     this.selectedUser = user;

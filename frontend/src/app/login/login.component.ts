@@ -41,16 +41,28 @@ export class LoginComponent {
     if (this.loginForm.valid) {
       const { name, ip, port } = this.loginForm.value;
       this.chatService.setUserDetails(name, ip, port);
-
-      const wsUrl = `ws://${ip}:${port}`;
-      console.log(`Logging in and connecting to WebSocket at ${wsUrl}`);
-
+      localStorage.setItem('userDetails', JSON.stringify({ name, ip, port }));
+  
+      console.log(`🚀 Logging in as ${name} (${ip}:${port})`);
+  
       this.webSocketService.connect();
-
-      setTimeout(() => {
-        this.router.navigate(['/chat']);
+  
+      const checkConnection = setInterval(() => {
+        if (this.webSocketService['isConnected']) {
+          clearInterval(checkConnection);
+  
+          this.webSocketService.sendMessage({
+            type: 'register',
+            callSign: name,
+            ip: ip,
+            port: port
+          });
+  
+          console.log(`✅ User ${name} registered on WebSocket server`);
+  
+          this.router.navigate(['/chat']);
+        }
       }, 500);
     }
-  }
-
+  }  
 }
