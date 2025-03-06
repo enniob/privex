@@ -66,24 +66,24 @@ export class MainComponent implements OnInit {
 
       else if (message.type === 'userAdded') {
         console.log(`🆕 New user added: ${message.callSign} (${message.ip}:${message.port})`);
-
-        // ✅ Ensure we don't duplicate users
+    
         const existingUser = this.users.find(user => user.callSign === message.callSign);
         if (!existingUser) {
-          this.users = [...this.users, {
-            callSign: message.callSign,
-            ip: message.ip,
-            port: message.port
-          }];
-          console.log(`✅ Added ${message.callSign} to the user list.`);
-          this.changeDetectorRef.detectChanges(); // ✅ Force UI update
+            this.users = [...this.users, {
+                callSign: message.callSign,
+                ip: message.ip,
+                port: message.port
+            }];
+            console.log(`✅ Added ${message.callSign} to the user list.`);
+            this.changeDetectorRef.detectChanges(); // ✅ Force UI update
         } else {
-          console.warn(`⚠️ User ${message.callSign} already exists in the list.`);
+            console.warn(`⚠️ User ${message.callSign} already exists in the list.`);
         }
-
+    
         // ✅ Debugging: Check if UI is receiving the event
         console.log(`👀 Current Users List:`, this.users);
       }
+    
 
       else if (message.type === 'userAddedBy') {
         console.log(`🔗 I was added by ${message.callSign} (${message.ip}:${message.port})`);

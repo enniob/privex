@@ -67,9 +67,10 @@ wss.on('connection', (ws: WebSocket) => {
       }
     
       console.log(`📢 Notifying Node B’s UI that ${senderCallSign} was added.`);
+      
       wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify({ type: 'userAdded', callSign: senderCallSign, ip: senderIp, port: senderPort }));
+          client.send(JSON.stringify({ type: 'userAdded', callSign, ip, port }));
         }
       });
     
