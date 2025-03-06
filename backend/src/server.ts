@@ -30,8 +30,7 @@ const PORT = process.env.PORT || 4300;
 // Data structures to track peers
 interface PeerInfo {
   ws: WebSocket;
-  address: string;
-  isOutgoing: boolean;
+  callSign: string;
 }
 const peers = new Map<string, PeerInfo>();  // Map of peerId -> PeerInfo
 
@@ -112,6 +111,72 @@ function connectToPeer(address: string) {
 }
 
 /**
+ * Registers the node when a user logs in. 
+ */
+function registerNode(msg: any) {
+  if (!msg.callSign || !msg.ip || !msg.port) {
+    log(`Invalid registration data: ${msg}`);
+  }
+
+  callSign = msg.callSign;
+  nodeIp = msg.ip;
+  nodePort = msg.port;
+
+  log(`Logedin as ${msg.callSign} (${msg.ip}:${msg.port})`);
+}
+
+/**
+ *  Handles adding a peer when "Add User" is clicked. 
+ */
+function addPeer(msg: any) {
+  const { peerCallSign, peerIp, peerPort } = msg;
+
+  if(!peerCallSign || !peerIp || !peerPort) {
+    log(`Invalid peer data:`, msg);
+    return;
+  }
+
+  const peerAddress = `ws://${peerIp}:${peerPort}`;
+
+  if(peers.has(peerAddress)) {
+    log(`Already connected to ${peerCallSign} at ${peerAddress}`);
+    return;
+  }
+
+  log(`Attempting to connect to ${peerCallSign} at ${peerAddress}...`);
+
+  try {
+    const ws = new WebSocket(peerAddress);
+
+    ws.on('open', () => {
+      log(`Connected to peer ${peerCallSign}`);
+
+      const confirmMessage = JSON.stringify({
+        type: 'confirmUser',
+        peerCallSign: callSign,
+        peerIp: nodeIp,
+        peerPort: nodePort
+      });
+
+      ws.send(confirmMessage);
+      log(`Sent confirmation to ${peerCallSign}`);
+    });
+
+    ws.on('message', (data) => handleMessage(ws, data));
+    ws.on('close', () => {
+      log(`Connection to ${peerCallSign} closed.`);
+      peers.delete(peerAddress);
+    });
+
+    ws.on('error', (err) => log(`Error connecting to ${peerCallSign}:`, err));
+
+    peers.set(peerAddress, { ws, callSign: peerCallSign });
+  } catch(err) {
+    log(`Failed to connect to ${peerCallSign}:`, err);
+  }
+}
+
+/**
  * Handle incoming messages on a WebSocket.
  * This covers both handshake messages and general data messages.
  */
@@ -129,93 +194,43 @@ function handleMessage(ws: WebSocket, data: WebSocket.RawData) {
     return;
   }
 
-  if (msg.type === 'login') {
-    callSign = msg.callSign;
-    nodeIp = msg.ip;
-    nodePort = msg.port;
+  switch(msg.type) {
+    case 'login': {
+      registerNode(msg);
+      break;
+    }
 
-    log(`Logedin as ${msg.callSign} (${msg.ip}:${msg.port})`);
-  }
+    case 'confirmUser': {
+      log(`Received confirmation from ${msg.peerCallSign} (${msg.peerIp}: ${msg.peerPort})`);
 
-  if (msg.type === 'register' && msg.callSign && msg.ip) {
-    const remoteId = crypto.randomBytes(4).toString('hex');
-    log(`Received register message from ${msg.callSign} (${msg.ip}:${msg.port})`);
+      const peerAddress = `ws://${msg.peerIp}:${msg.peerPort}`;
+      if(!peers.has(peerAddress)) {
+        peers.set(peerAddress, { ws, callSign: msg.peerCallSign });
+        log(`Peer connection established with ${msg.peerCallSign}`);
+      }
+      break;
+    }
 
-    if (!peers.has(remoteId)) {
-      peers.set(remoteId, { ws, address: msg.ip, isOutgoing: false });
-      log(`Registered peer ${msg.callSign} (${msg.ip}:${msg.port})`);
+    case 'addUser': {
+      log(`Received addUser request: ${msg}`);
+      addPeer(msg);
+      break;
+    }
+    default: {
+      log(`Received message: ${msg}`);
     }
   }
-
-  // Handle handshake message
-  // if (msg.type === 'handshake' && msg.id) {
-  //   const remoteId = msg.id;
-  //   const connection = ws as any;
-  //   // If we haven't recorded this peer's ID on this socket yet:
-  //   if (!connection.peerId) {
-  //     connection.peerId = remoteId;
-  //     const isOutgoing = !!connection.isOutgoing;
-  //     const addr = connection.address || `${remoteId}`;
-  //     log(`Received handshake from peer ${remoteId} (${isOutgoing ? 'outgoing' : 'incoming'} connection)`);
-
-  //     // If this peer ID is already connected via another socket, handle duplicate
-  //     if (peers.has(remoteId)) {
-  //       const existing = peers.get(remoteId)!;
-  //       const existingConn = existing.ws as any;
-  //       // Determine which connection to keep:
-  //       if (nodeId < remoteId) {
-  //         // Our node ID is smaller, so we yield to the peer with higher ID.
-  //         // If current connection is the one we initiated, close it; else close the other.
-  //         if (isOutgoing) {
-  //           log(`Duplicate connection to peer ${remoteId} detected. Closing outgoing connection (our ID is smaller).`);
-  //           try { ws.close(); } catch {}
-  //           return; // skip adding this connection
-  //         } else {
-  //           log(`Duplicate connection from peer ${remoteId} detected. Closing our outgoing connection (our ID is smaller).`);
-  //           try { existingConn.close(); } catch {}
-  //         }
-  //       } else {
-  //         // Our node ID is larger, we keep the connection we initiated.
-  //         if (isOutgoing) {
-  //           log(`Duplicate connection to peer ${remoteId} detected. Closing incoming connection from that peer (our ID is larger).`);
-  //           try { existingConn.close(); } catch {}
-  //         } else {
-  //           log(`Duplicate connection from peer ${remoteId} detected. Closing this incoming connection (our ID is larger).`);
-  //           try { ws.close(); } catch {}
-  //           return;
-  //         }
-  //       }
-  //       // After handling duplicates, fall through to add the remaining connection (if not returned).
-  //     }
-
-  //     // Add this peer to the map of active peers
-  //     peers.set(remoteId, { ws, address: connection.address || 'unknown', isOutgoing: !!connection.isOutgoing });
-  //     log(`Peer ${remoteId} added to active peer list`);
-  //   }
-
-  //   // Send our handshake ID back if we haven't already sent it on this socket
-  //   if (!(ws as any).handshakeSent) {
-  //     const reply = JSON.stringify({ type: 'handshake', id: nodeId });
-  //     try {
-  //       ws.send(reply);
-  //       (ws as any).handshakeSent = true;
-  //       log(`Sent handshake reply with node ID ${nodeId} to peer ${msg.id}`);
-  //     } catch (err) {
-  //       logError(`Failed to send handshake reply to ${msg.id}:`, err);
-  //     }
-  //   }
-  //   return;  // Handshake handled, no further processing for this message
-  // }
+  
 
   // Handle other message types (application-specific messages)
-  if ((ws as any).peerId) {
-    log(`Received message from peer ${(ws as any).peerId}:`, msg);
-    // Process application message as needed.
-    // For example, broadcast to other peers or perform some action.
-    // (This section can be customized based on the application's protocol)
-  } else {
-    log(`Received message before handshake was complete, ignoring.`);
-  }
+  // if ((ws as any).peerId) {
+  //   log(`Received message from peer ${(ws as any).peerId}:`, msg);
+  //   // Process application message as needed.
+  //   // For example, broadcast to other peers or perform some action.
+  //   // (This section can be customized based on the application's protocol)
+  // } else {
+  //   log(`Received message before handshake was complete, ignoring.`);
+  // }
 }
 
 // Listen for incoming WebSocket connections (peer nodes connecting to this node)
