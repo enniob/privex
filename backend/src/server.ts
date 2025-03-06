@@ -22,7 +22,7 @@ let callSign = '';
 let nodeIp = '';
 let nodePort = '';
 
-const PORT = process.env.PORT || 4310;
+const PORT = process.env.PORT || 4300;
 
 // Configuration: list of peer WebSocket addresses to connect to (if any)
 // const initialPeers = process.env.PEERS ? process.env.PEERS.split(',') : [];

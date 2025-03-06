@@ -51,7 +51,7 @@ export class LoginComponent {
           clearInterval(checkConnection);
   
           this.webSocketService.sendMessage({
-            type: 'register',
+            type: 'login',
             callSign: name,
             ip: ip,
             port: port
