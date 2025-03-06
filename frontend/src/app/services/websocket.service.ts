@@ -6,86 +6,47 @@ import { Observable, catchError, of } from 'rxjs';
   providedIn: 'root',
 })
 export class WebsocketService {
-  private sockets: { [key: string]: WebSocketSubject<any> } = {};
+  private socket!: WebSocketSubject<any>;
 
-  connect(url: string) {
-    console.log(`Connecting to WebSocket server at ${url}`);
+  constructor() {
+    const serverUrl = `ws://${window.location.hostname}:4300`; // Connect to local server.ts
+    console.log(`🔌 Connecting UI WebSocket to: ${serverUrl}`);
+    this.socket = webSocket(serverUrl);
 
-    // Store the connection under a generic key for server communication
-    if (!this.sockets['server']) {
-      this.sockets['server'] = webSocket(url);
-
-      this.sockets['server'].subscribe({
-        next: (message) => console.log("Server message received:", message),
-        error: (error) => console.error("WebSocket server error:", error),
-        complete: () => console.log("WebSocket server connection closed"),
-      });
-    }
-  }
-
-  // Connect to a peer's WebSocket server
-  connectToPeer(url: string, peerId: string) {
-    if (!this.sockets[peerId]) {
-      this.sockets[peerId] = webSocket(url);
-
-      this.sockets[peerId].subscribe({
-        next: () => console.log(`WebSocket connection established with ${peerId}`),
-        error: (error) => console.error(`WebSocket connection error with ${peerId}:`, error),
-        complete: () => console.log(`WebSocket connection closed with ${peerId}`),
-      });
-    }
-  }
-
-  // Send a message to a specific peer
-  sendMessageToPeer(peerId: string, message: any) {
-    if (!this.sockets[peerId]) {
-      console.warn(`No WebSocket connection found for peer ${peerId}, establishing connection...`);
-      this.connectToPeer(`ws://${message.ip}:${message.port}`, peerId); // Ensure connection is established
-      setTimeout(() => {
-        if (this.sockets[peerId]) {
-          this.sockets[peerId].next(message);
-        } else {
-          console.error(`WebSocket connection still not available for peer ${peerId}`);
-        }
-      }, 500); // Wait for connection to establish
-    } else {
-      this.sockets[peerId].next(message);
-    }
-  }
-
-  // Listen for incoming messages from all peers
-  receiveMessages(): Observable<any> {
-    return new Observable((observer) => {
-        Object.values(this.sockets).forEach((socket) => {
-            socket.subscribe({
-                next: (message) => {
-                    console.log("Received WebSocket message:", message);
-                    observer.next(message);
-                },
-                error: (error) => {
-                    console.error("WebSocket error:", error);
-                    observer.error(error);
-                }
-            });
-        });
+    this.socket.subscribe({
+      next: (message) => console.log("📩 Message received from server:", message),
+      error: (error) => console.error("❌ WebSocket server error:", error),
+      complete: () => console.log("⚠️ WebSocket server connection closed"),
     });
   }
 
-  // Automatically connect to new peers
-  autoConnectToNewPeer(peer: { callSign: string, ip: string, port: string }) {
-    const url = `ws://${peer.ip}:${peer.port}`;
-    
-    if (!this.sockets[peer.callSign]) {
-        console.log(`Connecting to new peer: ${peer.callSign} (${url})`);
-        this.connectToPeer(url, peer.callSign);
+  sendMessage(message: any) {
+    if (this.socket && this.socket.closed !== true) {
+      console.log(`📤 Sending message to server:`, message);
+      this.socket.next(message);
+    } else {
+      console.error(`❌ WebSocket connection to server is not open`);
     }
   }
 
-  // Close the WebSocket connection with a specific peer
-  closeConnectionToPeer(peerId: string) {
-    if (this.sockets[peerId]) {
-      this.sockets[peerId].complete();
-      delete this.sockets[peerId];
+  receiveMessages(): Observable<any> {
+    return new Observable((observer) => {
+      this.socket.subscribe({
+        next: (message) => {
+          console.log("📩 Received WebSocket message from server:", message);
+          observer.next(message);
+        },
+        error: (error) => {
+          console.error("❌ WebSocket error:", error);
+          observer.error(error);
+        }
+      });
+    });
+  }
+
+  closeConnection() {
+    if (this.socket) {
+      this.socket.complete();
     }
   }
 }

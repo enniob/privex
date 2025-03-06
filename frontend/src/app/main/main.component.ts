@@ -46,15 +46,15 @@ export class MainComponent implements OnInit {
       return;
     }
 
-    // ✅ Register the user
-    this.webSocketService.sendMessageToPeer(this.userDetails.name, {
+    // ✅ Register the user only with the local server (not with peers)
+    this.webSocketService.sendMessage({
       type: 'register',
       callSign: this.userDetails.name,
       ip: this.userDetails.ip,
       port: this.userDetails.port
     });
 
-    // ✅ Listen for peer updates
+    // ✅ Listen for peer updates from the WebSocket server
     this.webSocketService.receiveMessages().subscribe((message) => {
       console.log("📩 Received WebSocket message:", message);
 
@@ -64,9 +64,9 @@ export class MainComponent implements OnInit {
         this.changeDetectorRef.detectChanges(); // ✅ Force UI update
       }
 
-      else if (message.type === 'userAdded') {
+      else if (message.type === 'userAdded' || message.type === 'userAddedBy') {
         console.log(`🆕 New user added: ${message.callSign} (${message.ip}:${message.port})`);
-    
+
         const existingUser = this.users.find(user => user.callSign === message.callSign);
         if (!existingUser) {
             this.users = [...this.users, {
@@ -82,22 +82,6 @@ export class MainComponent implements OnInit {
     
         // ✅ Debugging: Check if UI is receiving the event
         console.log(`👀 Current Users List:`, this.users);
-      }
-    
-
-      else if (message.type === 'userAddedBy') {
-        console.log(`🔗 I was added by ${message.callSign} (${message.ip}:${message.port})`);
-        if (!this.users.some(user => user.callSign === message.callSign)) {
-          this.users = [...this.users, {
-            callSign: message.callSign,
-            ip: message.ip,
-            port: message.port
-          }];
-          console.log(`✅ Added ${message.callSign} to the user list.`);
-          this.changeDetectorRef.detectChanges(); // ✅ Force UI update
-        } else {
-          console.warn(`⚠️ ${message.callSign} is already in the user list.`);
-        }
       }
 
       else if (message.type === 'userRemoved') {
@@ -127,7 +111,7 @@ export class MainComponent implements OnInit {
         content: this.newMessage,
         recipient: this.selectedUser.callSign,
       };
-      this.webSocketService.sendMessageToPeer(this.selectedUser.callSign, payload);
+      this.webSocketService.sendMessage(payload);
       this.newMessage = '';
     }
   }
@@ -141,7 +125,8 @@ export class MainComponent implements OnInit {
       if (result && result.callSign && result.ip && result.port) {
         console.log(`Adding new user: ${result.callSign} (${result.ip}:${result.port})`);
 
-        this.webSocketService.sendMessageToPeer(result.callSign, {
+        // ✅ Now we only send the addUser request to the local server, not the peer directly
+        this.webSocketService.sendMessage({
           type: 'addUser',
           callSign: result.callSign,
           ip: result.ip,
