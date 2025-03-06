@@ -54,82 +54,57 @@ wss.on('connection', (ws: WebSocket) => {
     else if (data.type === 'addUser') {
       const { callSign, ip, port, senderCallSign, senderIp, senderPort } = data;
       console.log(`[ADD USER] ${senderCallSign} is adding ${callSign} (${ip}:${port})`);
-    
+
       if (!nodes.has(callSign)) {
         nodes.set(callSign, { id: generateId(), callSign, ip, port });
         console.log(`✅ Registered new node: ${callSign} (${ip}:${port})`);
-      } else {
-        console.warn(`⚠️ Node ${callSign} already exists, sending confirmation to ${senderCallSign}.`);
       }
-    
+
       if (!nodes.has(senderCallSign)) {
         nodes.set(senderCallSign, { id: generateId(), callSign: senderCallSign, ip: senderIp, port: senderPort });
         console.log(`✅ Registered sender node: ${senderCallSign} (${senderIp}:${senderPort})`);
       }
-    
-      console.log(`📢 Notifying Node B’s UI that ${senderCallSign} was added.`);
-      
+
+      console.log(`📢 Notifying all nodes that ${senderCallSign} added ${callSign}`);
+
+      // 🔥 **New: Notify ALL local WebSocket clients (UI users) about the new user**
       wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(JSON.stringify({ type: 'userAdded', callSign, ip, port }));
         }
       });
-    
-      let senderWs: WebSocket | undefined;
-      for (const [clientWs, clientCallSign] of connections.entries()) {
-        if (clientCallSign === senderCallSign) {
-          senderWs = clientWs;
-          break;
-        }
-      }
-    
-      if (senderWs && senderWs.readyState === WebSocket.OPEN) {
-        console.log(`📢 Sending userAddedBy confirmation to ${senderCallSign}`);
-        senderWs.send(JSON.stringify({
-          type: 'userAddedBy',
-          callSign,
-          ip,
-          port
-        }));
-      } else {
-        console.error(`❌ No WebSocket connection found for ${senderCallSign}, establishing a new one.`);
-    
-        const remoteWs = new WebSocket(`ws://${senderIp}:${senderPort}`);
-    
-        remoteWs.on('open', () => {
-          console.log(`✅ WebSocket connection established between ${callSign} and ${senderCallSign}`);
-          connections.set(remoteWs, senderCallSign);
-    
-          remoteWs.send(JSON.stringify({
+
+      // 🔥 **New: Ensure the local server connects to the new peer server**
+      const remoteWs = new WebSocket(`ws://${ip}:${port}`);
+
+      remoteWs.on('open', () => {
+        console.log(`✅ WebSocket connection established with ${callSign}`);
+        connections.set(remoteWs, callSign);
+
+        // 🔥 Send `userAddedBy` confirmation to the sender's server
+        const senderWs = Array.from(connections.entries()).find(([ws, sign]) => sign === senderCallSign)?.[0];
+
+        if (senderWs && senderWs.readyState === WebSocket.OPEN) {
+          console.log(`📢 Sending userAddedBy confirmation to ${senderCallSign}`);
+          senderWs.send(JSON.stringify({
             type: 'userAddedBy',
             callSign,
             ip,
             port
           }));
-        });
-    
-        remoteWs.on('message', (message: any) => {
-          const receivedData = JSON.parse(message);
-          console.log(`📩 Message from ${callSign}:`, receivedData);
-    
-          wss.clients.forEach((client) => {
-            if (client.readyState === WebSocket.OPEN) {
-              client.send(JSON.stringify(receivedData));
-            }
-          });
-        });
-    
-        remoteWs.on('error', (err) => {
-          console.error(`❌ Error connecting to ${callSign}:`, err);
-        });
-    
-        remoteWs.on('close', () => {
-          console.log(`⚠️ Connection to ${callSign} closed.`);
-          nodes.delete(callSign);
-          connections.delete(remoteWs);
-        });
-      }
-    }    
+        }
+      });
+
+      remoteWs.on('error', (err) => {
+        console.error(`❌ Error connecting to ${callSign}:`, err);
+      });
+
+      remoteWs.on('close', () => {
+        console.log(`⚠️ Connection to ${callSign} closed.`);
+        nodes.delete(callSign);
+        connections.delete(remoteWs);
+      });
+    }  
   });
 
   ws.on('close', () => {
