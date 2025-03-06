@@ -38,10 +38,10 @@ export class ChatService {
       content: message,
     };
 
-    // ✅ Fix: Use sendMessageToPeer() instead of sendMessage()
-    this.webSocketService.sendMessageToPeer(user, payload);
+    // ✅ Fix: Now sending messages to `server.ts` instead of directly to peers
+    this.webSocketService.sendMessage(payload);
 
-    // Update local chat history
+    // ✅ Update local chat history
     const history = this.chatHistory();
     if (history[user]) {
       history[user].push({ sender: this.callSign(), content: message });
@@ -50,7 +50,6 @@ export class ChatService {
     }
     this.chatHistory.set({ ...history });
   }
-
 
   private handleIncomingMessage(message: any) {
     if (message?.type === 'message') {

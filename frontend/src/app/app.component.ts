@@ -21,9 +21,7 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.userDetails?.ip) {
-      const wsUrl = `ws://${this.userDetails.ip}:4300`;
-      console.log(`Connecting to WebSocket server at ${wsUrl}`);
-      this.webSocketService.connect(wsUrl);
+      this.webSocketService.connect();
       this.router.navigate(['/chat']);
     } else {
       this.router.navigate(['/login']);

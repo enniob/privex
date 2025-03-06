@@ -45,8 +45,7 @@ export class LoginComponent {
       const wsUrl = `ws://${ip}:${port}`;
       console.log(`Logging in and connecting to WebSocket at ${wsUrl}`);
 
-      // ✅ Ensure WebSocket is connected before proceeding
-      this.webSocketService.connect(wsUrl);
+      this.webSocketService.connect();
 
       setTimeout(() => {
         this.router.navigate(['/chat']);
