@@ -9,7 +9,8 @@ const app = express();
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
-const server = app.listen(4300, () => console.log('Server running on port 4300'));
+const PORT = '4300';
+const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 const wss = new WebSocketServer({ server });
 
 const nodes = new Map<string, Node>();
