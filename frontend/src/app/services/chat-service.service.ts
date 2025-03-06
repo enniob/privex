@@ -16,13 +16,6 @@ export class ChatService {
     this.webSocketService.receiveMessages().subscribe((message: any) => {
       this.handleIncomingMessage(message);
     });
-
-    // Restore user details from localStorage
-    const savedUser = JSON.parse(localStorage.getItem('userDetails') || 'null');
-    if (savedUser) {
-      this.userDetails.set(savedUser);
-      this.callSign.set(savedUser.name);
-    }
   }
 
   selectUser(user: string) {
@@ -33,7 +26,6 @@ export class ChatService {
     const userData = { name, ip, port };
     this.userDetails.set(userData);
     this.callSign.set(name);
-    localStorage.setItem('userDetails', JSON.stringify(userData));
   }
 
   getUserDetails() {

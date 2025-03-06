@@ -12,13 +12,7 @@ export class WebsocketService {
   connect() {
     if (this.isConnected) return;
 
-    const userDetails = JSON.parse(localStorage.getItem('userDetails') || '{}');
-    if (!userDetails?.ip || !userDetails?.port) {
-      console.error('❌ No user details found, cannot connect to WebSocket.');
-      return;
-    }
-
-    const wsUrl = `ws://${userDetails.ip}:${userDetails.port}`;
+    const wsUrl = `ws://${window.location.hostname}:4300`;
     console.log(`🔌 Connecting to WebSocket server at: ${wsUrl}`);
 
     this.socket = new WebSocket(wsUrl);

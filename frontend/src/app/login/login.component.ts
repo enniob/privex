@@ -41,7 +41,6 @@ export class LoginComponent {
     if (this.loginForm.valid) {
       const { name, ip, port } = this.loginForm.value;
       this.chatService.setUserDetails(name, ip, port);
-      localStorage.setItem('userDetails', JSON.stringify({ name, ip, port }));
   
       console.log(`🚀 Logging in as ${name} (${ip}:${port})`);
   
