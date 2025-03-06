@@ -47,15 +47,7 @@ export class MainComponent implements OnInit {
     }
   
     console.log(`🚀 Registering user: ${this.userDetails.name}`);
-  
-    // ✅ Register the user only with the local server (not with peers)
-    this.webSocketService.sendMessage({
-      type: 'register',
-      callSign: this.userDetails.name,
-      ip: this.userDetails.ip,
-      port: this.userDetails.port
-    });
-  
+    
     // ✅ Ensure the user sees themselves on the UI after registration
     this.users = [...this.users, {
       callSign: this.userDetails.name,
