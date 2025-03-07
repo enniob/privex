@@ -1,12 +1,11 @@
 <div class="chat-container">
-  <!-- User List -->
   <mat-card class="user-list">
     <mat-card-header>
       <mat-card-title>Users</mat-card-title>
     </mat-card-header>
     <mat-card-content>
       <mat-list>
-        <mat-list-item *ngFor="let user of users" (click)="selectUser(user)">
+        <mat-list-item *ngFor="let user of users()" (click)="selectUser(user)">
           {{ user.callSign }} ({{ user.ip }}:{{ user.port }})
         </mat-list-item>
       </mat-list>
@@ -16,17 +15,22 @@
     </mat-card-content>
   </mat-card>
 
-  <!-- Chat Window -->
   <mat-card class="chat-window">
     <mat-card-header>
       <mat-card-title>
-        {{ selectedUser ? `Chat with ${selectedUser.callSign}` : 'Chat' }}
+        {{ selectedUser() ? `Chat with ${selectedUser()}` : 'Chat' }}
       </mat-card-title>
     </mat-card-header>
     <mat-card-content>
-      <div *ngIf="selectedUser; else noUserSelected" class="messages">
-        <div *ngFor="let message of messages" class="message">
-          <strong>{{ message.sender }}:</strong> {{ message.content }}
+      <div *ngIf="selectedUser(); else noUserSelected" class="messages" #messagesContainer>
+        <div *ngFor="let message of getMessagesForSelectedUser()" class="message"
+          [ngClass]="{'sent': message.sender === userDetails()?.name, 'received': message.sender !== userDetails()?.name}">
+          <div class="message-content">
+            {{ message.content }}
+          </div>
+          <div class="message-timestamp">
+            {{ message.timestamp | date:'shortTime' }}
+          </div>
         </div>
       </div>
       <ng-template #noUserSelected>
@@ -36,23 +40,12 @@
         </div>
       </ng-template>
 
-      <!-- Message Input -->
       <div class="message-input">
         <mat-form-field appearance="outline" class="full-width">
-          <input
-            matInput
-            [(ngModel)]="newMessage"
-            placeholder="Type a message..."
-            (keyup.enter)="sendMessage()"
-            [disabled]="!selectedUser"
-          />
+          <input matInput [(ngModel)]="newMessage" placeholder="Type a message..." (keyup.enter)="sendMessage()"
+            [disabled]="!selectedUser()" />
         </mat-form-field>
-        <button
-          mat-icon-button
-          color="primary"
-          (click)="sendMessage()"
-          [disabled]="!selectedUser"
-        >
+        <button mat-icon-button color="primary" (click)="sendMessage()" [disabled]="!selectedUser()">
           <mat-icon>send</mat-icon>
         </button>
       </div>

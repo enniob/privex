@@ -10,7 +10,8 @@ export class ChatService {
   selectedUser = signal<string | null>(null);
   userDetails = signal<{ name: string; ip: string; port: string } | null>(null);
   callSign = signal<string>('Anonymous');
-  chatHistory = signal<{ [key: string]: { sender: string; content: string }[] }>({});
+  chatHistory = signal<{ [key: string]: { sender: string; content: string; timestamp: Date }[] }>({});
+  users = signal<{ callSign: string; ip: string; port: string }[]>([]);
 
   constructor() {
     this.webSocketService.receiveMessages().subscribe((message: any) => {
@@ -26,47 +27,66 @@ export class ChatService {
     const userData = { name, ip, port };
     this.userDetails.set(userData);
     this.callSign.set(name);
+    this.users.update(users => [...users, { callSign: name, ip, port }]);
   }
 
   getUserDetails() {
-    return this.userDetails(); // ✅ Fixed: Now correctly returns the object
+    return this.userDetails();
   }
 
-  sendMessage(user: string, message: string) {
-    if (!this.webSocketService) {
-      console.error('❌ WebSocket service is not initialized.');
-      return;
-    }
+  getUsers() {
+    return this.users();
+  }
 
-    const payload = {
-      type: 'message',
-      sender: this.callSign(),
-      recipient: user,
-      content: message,
-    };
-
+  sendMessage(payload: any) {
     this.webSocketService.sendMessage(payload);
+  }
 
+  openAddUser(details: { callSign: string; ip: string; port: string }) {
+    this.webSocketService.sendMessage({
+      type: 'addUser',
+      peerCallSign: details.callSign,
+      peerIp: details.ip,
+      peerPort: details.port
+    });
+    this.updateUserList(details);
+  }
+  
+  private handleIncomingMessage(message: any) {
+    switch(message.type) {
+      case 'message':
+        this.updateChatHistory(message);
+        break;
+      case 'peerConfirmed':
+        this.updateUserList({ callSign: message.peerCallSign, ip: message.peerIp, port: message.peerPort });
+        break;
+      case 'messageReceived':
+        this.updateChatHistory({sender: message.sender, content: message.content, timestamp: new Date() });
+        break;
+      default:
+        console.warn(`Unhandled message type: ${message?.type}`);
+    }
+  }
+
+  private updateChatHistory(message: { sender: string; content: string; timestamp: Date }) {
     const history = this.chatHistory();
-    if (history[user]) {
-      history[user].push({ sender: this.callSign(), content: message });
+    const sender = message.sender;
+
+    if (history[sender]) {
+      history[sender].push({ sender: sender, content: message.content, timestamp: message.timestamp });
     } else {
-      history[user] = [{ sender: this.callSign(), content: message }];
+      history[sender] = [{ sender: sender, content: message.content, timestamp: message.timestamp }];
     }
     this.chatHistory.set({ ...history });
   }
 
-  private handleIncomingMessage(message: any) {
-    if (message?.type === 'message') {
-      const history = this.chatHistory();
-      const sender = message.sender;
-
-      if (history[sender]) {
-        history[sender].push({ sender: sender, content: message.content });
-      } else {
-        history[sender] = [{ sender: sender, content: message.content }];
-      }
-      this.chatHistory.set({ ...history });
+  private updateUserList(message: { callSign: string; ip: string; port: string }) {
+    const existingUser = this.users().find(user => user.callSign === message.callSign);
+    if (!existingUser) {
+      this.users.update(users => [...users, { callSign: message.callSign, ip: message.ip, port: message.port }]);
+      console.log(`✅ Added ${message.callSign} to the user list.`);
+    } else {
+      console.warn(`⚠️ User ${message.callSign} already exists in the list.`);
     }
   }
 }
