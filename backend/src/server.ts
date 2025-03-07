@@ -183,7 +183,7 @@ function handleMessage(ws: WebSocket, data: WebSocket.RawData) {
     }
 
     case 'addUser': {
-      log(`Received addUser request: ${msg}`);
+      log(`Received addUser request:`, msg);
       addPeer(msg);
       break;
     }
