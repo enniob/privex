@@ -105,6 +105,39 @@ function addPeer(msg: any) {
 }
 
 /**
+ * Send message to a Node 
+ */
+function sendMessage(msg: any, senderWs: WebSocket) {
+  const { recipientCallSign, content } = msg;
+
+  if (!recipientCallSign || !content) {
+    log(`Invalid message data:`, msg);
+    return;
+  }
+
+  const recipientPeer = [...peers.values()].find(peer => peer.callSign === recipientCallSign);
+
+  if (recipientPeer && recipientPeer.ws.readyState === WebSocket.OPEN) {
+    log(`Forwarding message from ${callSign} to ${recipientCallSign}`);
+
+    const messagePayload = JSON.stringify({
+      type: 'message',
+      sender: callSign,
+      recipientCallSign,
+      content
+    });
+
+    recipientPeer.ws.send(messagePayload);
+
+    broadCastToUI({ type: 'messageSent', recipientCallSign, content }, senderWs);
+    log(`Message delivered to ${recipientCallSign}`);
+  } else {
+    log(`Recipient ${recipientCallSign} is not available`);
+    broadCastToUI({ type: 'messageFailed', recipientCallSign, reason: 'Recipient not available' }, senderWs);
+  }
+}
+
+/**
  * Handle incoming messages on a WebSocket.
  * This covers both handshake messages and general data messages.
  */
@@ -152,6 +185,13 @@ function handleMessage(ws: WebSocket, data: WebSocket.RawData) {
       addPeer(msg);
       break;
     }
+
+    case 'message': {
+      log(`Received chat message from ${msg.sender} to ${msg.recipientCallSign}`);
+      sendMessage(msg, ws);
+      break;
+    }
+
     default: {
       log(`Received message: ${msg}`);
     }

@@ -126,7 +126,7 @@ export class MainComponent implements OnInit {
         type: 'message',
         sender: this.userDetails?.name,
         content: this.newMessage,
-        recipient: this.selectedUser.callSign,
+        recipientCallSign: this.selectedUser.callSign,
       };
       this.webSocketService.sendMessage(payload);
       this.newMessage = '';

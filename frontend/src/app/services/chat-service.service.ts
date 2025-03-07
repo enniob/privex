@@ -41,7 +41,7 @@ export class ChatService {
     const payload = {
       type: 'message',
       sender: this.callSign(),
-      recipient: user,
+      recipientCallSign: user,
       content: message,
     };
 
