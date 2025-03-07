@@ -208,8 +208,18 @@ function handleMessage(ws: WebSocket, data: WebSocket.RawData) {
       break;
     }
 
+    case 'userOffline': {
+      log(`Received offline message from ${msg.sender}`)
+      broadCastToUI({
+        type: 'offline',
+        sender: msg.sender,
+        content: msg.content
+      }, ws);
+      break;
+    }
+
     default: {
-      log(`Received message: ${msg}`);
+      log(`Received message:`,  msg);
     }
   }
 }
@@ -260,7 +270,6 @@ wss.on('connection', (ws, req) => {
     }
     
     broadcastToPeers({ type: 'userOffline', callSign: callSign });
-    broadCastToUI({ type: 'userOffline', callSign: callSign }, ws);
   });
 
   ws.on('error', (err) => {

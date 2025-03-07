@@ -91,13 +91,13 @@ export class ChatService {
         this.updateChatHistory({sender: message.sender, content: message.content, timestamp: new Date() });
         break;
 
-      case 'userOnline':
+      case 'online':
         this.users.update((users) =>
           users.map((user) => (user.callSign === message.callSign ? { ...user, status: 'online' } : user))
         );
         break;
       
-      case 'userOffline':
+      case 'offline':
         this.users.update((users) =>
           users.map((user) => (user.callSign === message.callSign ? { ...user, status: 'offline' } : user))
         );
