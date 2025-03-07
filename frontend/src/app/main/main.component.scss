@@ -59,6 +59,7 @@
 
     .message-content {
       background-color: #dcf8c6;
+      border-radius: 20px 2px 20px 20px;
     }
   }
 
@@ -67,12 +68,12 @@
 
     .message-content {
       background-color: #e5e5ea;
+      border-radius: 2px 20px 20px 20px;
     }
   }
 
   .message-content {
     padding: 8px 12px;
-    border-radius: 18px;
   }
 
   .message-timestamp {
