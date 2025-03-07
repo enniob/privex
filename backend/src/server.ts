@@ -226,6 +226,18 @@ function broadCastToUI(msg: any, ws: any) {
   log(`Broadcasted to UI: ${msg}`);
 }
 
+function broadcastToPeers(msg: any) {
+  const messageString = JSON.stringify(msg);
+
+  peers.forEach((peerInfo) => {
+      if (peerInfo.ws.readyState === WebSocket.OPEN) {
+          peerInfo.ws.send(messageString);
+      }
+  });
+
+  log(`Broadcasted to peers: ${messageString}`);
+}
+
 // Listen for incoming WebSocket connections (peer nodes connecting to this node)
 wss.on('connection', (ws, req) => {
   const clientAddr = `${req.socket.remoteAddress}:${req.socket.remotePort}`;
@@ -247,6 +259,7 @@ wss.on('connection', (ws, req) => {
       log(`Removed peer ${peerId} from active list`);
     }
     
+    broadcastToPeers({ type: 'userOffline', callSign: callSign });
     broadCastToUI({ type: 'userOffline', callSign: callSign }, ws);
   });
 
