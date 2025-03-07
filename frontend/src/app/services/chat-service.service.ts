@@ -93,13 +93,13 @@ export class ChatService {
 
       case 'online':
         this.users.update((users) =>
-          users.map((user) => (user.callSign === message.callSign ? { ...user, status: 'online' } : user))
+          users.map((user) => (user.callSign === message.sender ? { ...user, status: 'online' } : user))
         );
         break;
       
       case 'offline':
         this.users.update((users) =>
-          users.map((user) => (user.callSign === message.callSign ? { ...user, status: 'offline' } : user))
+          users.map((user) => (user.callSign === message.sender ? { ...user, status: 'offline' } : user))
         );
         break;
       
