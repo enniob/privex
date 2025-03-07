@@ -60,6 +60,9 @@ export class ChatService {
       case 'peerConfirmed':
         this.updateUserList({ callSign: message.peerCallSign, ip: message.peerIp, port: message.peerPort });
         break;
+      case 'messageReceived':
+        this.updateChatHistory({sender: message.sender, content: message.content});
+        break;
       default:
         console.warn(`Unhandled message type: ${message?.type}`);
     }
