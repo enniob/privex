@@ -10,7 +10,7 @@ export class ChatService {
   selectedUser = signal<string | null>(null);
   userDetails = signal<{ name: string; ip: string; port: string } | null>(null);
   callSign = signal<string>('Anonymous');
-  chatHistory = signal<{ [key: string]: { sender: string; content: string }[] }>({});
+  chatHistory = signal<{ [key: string]: { sender: string; content: string; timestamp: Date }[] }>({});
   users = signal<{ callSign: string; ip: string; port: string }[]>([]);
 
   constructor() {
@@ -61,21 +61,21 @@ export class ChatService {
         this.updateUserList({ callSign: message.peerCallSign, ip: message.peerIp, port: message.peerPort });
         break;
       case 'messageReceived':
-        this.updateChatHistory({sender: message.sender, content: message.content});
+        this.updateChatHistory({sender: message.sender, content: message.content, timestamp: new Date() });
         break;
       default:
         console.warn(`Unhandled message type: ${message?.type}`);
     }
   }
 
-  private updateChatHistory(message: any) {
+  private updateChatHistory(message: { sender: string; content: string; timestamp: Date }) {
     const history = this.chatHistory();
     const sender = message.sender;
 
     if (history[sender]) {
-      history[sender].push({ sender: sender, content: message.content });
+      history[sender].push({ sender: sender, content: message.content, timestamp: message.timestamp });
     } else {
-      history[sender] = [{ sender: sender, content: message.content }];
+      history[sender] = [{ sender: sender, content: message.content, timestamp: message.timestamp }];
     }
     this.chatHistory.set({ ...history });
   }

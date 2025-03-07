@@ -51,13 +51,26 @@ export class MainComponent {
 
   sendMessage() {
     if (this.newMessage.trim() && this.selectedUser()) {
+      const sender = this.userDetails()?.name || 'Anonymous';
+      const timestamp = new Date();
       const payload = {
         type: 'message',
-        sender: this.userDetails()?.name,
+        sender: sender,
         content: this.newMessage,
         recipientCallSign: this.selectedUser(),
       };
-      this.chatService.sendMessage(payload);
+
+      this.chatService.sendMessage(payload); // Send via WebSocket
+
+      // Add the message to chatHistory (your own message)
+      this.chatService.chatHistory.update((history: any) => {
+        const userHistory = history[this.selectedUser()!] || [];
+        return {
+          ...history,
+          [this.selectedUser()!]: [...userHistory, { sender: sender, content: this.newMessage, timestamp: timestamp }],
+        };
+      });
+
       this.newMessage = '';
     }
   }
@@ -77,7 +90,7 @@ export class MainComponent {
     });
   }
 
-  getMessagesForSelectedUser(): { sender: string; content: string }[] {
+  getMessagesForSelectedUser(): { sender: string; content: string; timestamp: Date }[] {
     const selectedUser = this.selectedUser();
     if (selectedUser) {
       return this.chatHistory()[selectedUser] || [];
