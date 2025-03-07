@@ -209,11 +209,10 @@ function handleMessage(ws: WebSocket, data: WebSocket.RawData) {
     }
 
     case 'userOffline': {
-      log(`Received offline message from ${msg.sender}`)
+      log(`Received offline message from ${msg.callSign}`)
       broadCastToUI({
         type: 'offline',
-        sender: msg.sender,
-        content: msg.content
+        sender: msg.callSign
       }, ws);
       break;
     }
