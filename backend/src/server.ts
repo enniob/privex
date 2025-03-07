@@ -85,7 +85,7 @@ function addPeer(msg: any) {
         peerIp: nodeIp,
         peerPort: nodePort
       });
-
+      
       ws.send(confirmMessage);
       log(`Sent confirmation to ${peerCallSign}`);
     });

@@ -57,7 +57,24 @@ export class MainComponent implements OnInit {
   
     this.webSocketService.receiveMessages().subscribe((message) => {
       console.log("📩 Received WebSocket message:", message);
-  
+      
+      switch(message.type) {
+        case 'peerConfirmed': {
+          console.log(`🆕 New user added: ${message.peerCallSign} (${message.peerIp}:${message.peerPort})`);
+
+          this.updateUserList({ callSign: message.peerCallSign, ip: message.peerIp, port: message.peerPort });
+      
+          // ✅ Debugging: Check if UI is receiving the event
+          console.log(`👀 Current Users List:`, this.users);
+          break;
+        }
+
+        default: {
+          console.error(`❌ Unable to process message`);
+          break;
+        }
+      }
+
       // if (message.type === 'nodes') {
       //   console.log("🔍 Updating full peer list");
       //   this.users = message.nodes;
@@ -131,9 +148,26 @@ export class MainComponent implements OnInit {
           peerIp: result.ip,
           peerPort: result.port
         });
+
+        this.updateUserList({ callSign: result.callSign, ip: result.ip, port: result.port });
       } else {
         console.warn("Invalid user data received from dialog.");
       }
     });
+  }
+
+  private updateUserList(message: any) {
+    const existingUser = this.users.find(user => user.callSign === message.callSign);
+    if (!existingUser) {
+        this.users = [...this.users, {
+            callSign: message.callSign,
+            ip: message.ip,
+            port: message.port
+        }];
+        console.log(`✅ Added ${message.callSign} to the user list.`);
+        // this.changeDetectorRef.detectChanges();
+    } else {
+        console.warn(`⚠️ User ${message.callSign} already exists in the list.`);
+    }
   }
 }
