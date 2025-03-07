@@ -115,13 +115,15 @@ function sendMessage(msg: any, senderWs: WebSocket) {
     return;
   }
 
+  log(`Available peers:`, [...peers.values()].map(p => p.callSign));
+
   const recipientPeer = [...peers.values()].find(peer => peer.callSign === recipientCallSign);
 
   if (recipientPeer && recipientPeer.ws.readyState === WebSocket.OPEN) {
     log(`Forwarding message from ${callSign} to ${recipientCallSign}`);
 
     const messagePayload = JSON.stringify({
-      type: 'message',
+      type: 'forwardedMessage',
       sender: callSign,
       recipientCallSign,
       content
@@ -130,7 +132,7 @@ function sendMessage(msg: any, senderWs: WebSocket) {
     recipientPeer.ws.send(messagePayload);
 
     broadCastToUI({ type: 'messageSent', recipientCallSign, content }, senderWs);
-    log(`Message delivered to ${recipientCallSign}`);
+    log(`Message forwarded to ${recipientCallSign}`);
   } else {
     log(`Recipient ${recipientCallSign} is not available`);
     broadCastToUI({ type: 'messageFailed', recipientCallSign, reason: 'Recipient not available' }, senderWs);
@@ -189,6 +191,20 @@ function handleMessage(ws: WebSocket, data: WebSocket.RawData) {
     case 'message': {
       log(`Received chat message from ${msg.sender} to ${msg.recipientCallSign}`);
       sendMessage(msg, ws);
+      break;
+    }
+
+    case 'forwardedMessage': {
+      log(`Received forwarded message from ${msg.sender} to ${msg.recipientCallSign}`);
+      if (msg.recipientCallSign === callSign) {
+        broadCastToUI({
+          type: 'messageReceived',
+          sender: msg.sender,
+          content: msg.content
+        }, ws);
+      } else {
+        log(`This message was not meant for me, ignoring.`);
+      }
       break;
     }
 
