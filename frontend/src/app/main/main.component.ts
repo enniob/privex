@@ -64,8 +64,13 @@ export class MainComponent implements OnInit {
 
           this.updateUserList({ callSign: message.peerCallSign, ip: message.peerIp, port: message.peerPort });
       
-          // ✅ Debugging: Check if UI is receiving the event
           console.log(`👀 Current Users List:`, this.users);
+          break;
+        }
+
+        case 'messageReceived': {
+          console.log(`💬 Message received: ${message.content}`);
+          this.messages.push({ sender: message.sender, content: message.content });
           break;
         }
 
@@ -104,12 +109,6 @@ export class MainComponent implements OnInit {
       // else if (message.type === 'userRemoved') {
       //   console.log(`❌ User disconnected: ${message.callSign}`);
       //   this.users = this.users.filter(user => user.callSign !== message.callSign);
-      //   this.changeDetectorRef.detectChanges(); // ✅ Force UI update
-      // }
-  
-      // else if (message.type === 'message') {
-      //   console.log(`💬 Message received: ${message.content}`);
-      //   this.messages.push({ sender: message.sender, content: message.content });
       //   this.changeDetectorRef.detectChanges(); // ✅ Force UI update
       // }
     });
@@ -165,7 +164,6 @@ export class MainComponent implements OnInit {
             port: message.port
         }];
         console.log(`✅ Added ${message.callSign} to the user list.`);
-        // this.changeDetectorRef.detectChanges();
     } else {
         console.warn(`⚠️ User ${message.callSign} already exists in the list.`);
     }

@@ -29,7 +29,7 @@ export class ChatService {
   }
 
   getUserDetails() {
-    return this.userDetails(); // ✅ Fixed: Now correctly returns the object
+    return this.userDetails();
   }
 
   sendMessage(user: string, message: string) {
