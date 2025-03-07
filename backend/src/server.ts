@@ -235,7 +235,8 @@ wss.on('connection', (ws, req) => {
   (ws as any).handshakeSent = false;
   log(`New incoming connection from ${clientAddr}`);
 
-  // Set up message, close, error handlers for the incoming socket
+  broadCastToUI({ type: 'userOnline', address: clientAddr }, ws);
+
   ws.on('message', (data) => handleMessage(ws, data));
 
   ws.on('close', (code, reason) => {
@@ -245,7 +246,8 @@ wss.on('connection', (ws, req) => {
       peers.delete(peerId);
       log(`Removed peer ${peerId} from active list`);
     }
-    // We do not actively reconnect to incoming peers; assume they will reconnect if needed
+    
+    broadCastToUI({ type: 'userOffline', callSign: callSign }, ws);
   });
 
   ws.on('error', (err) => {

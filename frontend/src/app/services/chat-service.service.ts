@@ -1,6 +1,14 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { WebsocketService } from './websocket.service';
 
+interface User {
+  callSign: string;
+  ip: string;
+  port: string;
+  address: string;
+  status: 'online' | 'offline';
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -11,7 +19,7 @@ export class ChatService {
   userDetails = signal<{ name: string; ip: string; port: string } | null>(null);
   callSign = signal<string>('Anonymous');
   chatHistory = signal<{ [key: string]: { sender: string; content: string; timestamp: Date }[] }>({});
-  users = signal<{ callSign: string; ip: string; port: string }[]>([]);
+  users = signal<User[]>([]);
 
   constructor() {
     this.webSocketService.receiveMessages().subscribe((message: any) => {
@@ -27,7 +35,11 @@ export class ChatService {
     const userData = { name, ip, port };
     this.userDetails.set(userData);
     this.callSign.set(name);
-    this.users.update(users => [...users, { callSign: name, ip, port }]);
+
+    this.users.update((users) => [
+      ...users,
+      { callSign: name, ip, port, address: `ws://${ip}:${port}`, status: 'online' },
+    ]);
   }
 
   getUserDetails() {
@@ -54,15 +66,43 @@ export class ChatService {
   
   private handleIncomingMessage(message: any) {
     switch(message.type) {
+      case 'nodeConnected':
+        this.users.update((users) => [
+          ...users,
+          { address: message.address, callSign: message.address, ip: '', port: '', status: 'offline' },
+        ]);
+        break
+
       case 'message':
         this.updateChatHistory(message);
         break;
+
       case 'peerConfirmed':
         this.updateUserList({ callSign: message.peerCallSign, ip: message.peerIp, port: message.peerPort });
+        this.users.update((users) =>
+          users.map((user) =>
+              user.address === `ws://${message.peerIp}:${message.peerPort}`
+                ? { ...user, callSign: message.peerCallSign, ip: message.peerIp, port: message.peerPort, status: 'online' }
+                : user
+        ));
         break;
+
       case 'messageReceived':
         this.updateChatHistory({sender: message.sender, content: message.content, timestamp: new Date() });
         break;
+
+      case 'userOnline':
+        this.users.update((users) =>
+          users.map((user) => (user.callSign === message.callSign ? { ...user, status: 'online' } : user))
+        );
+        break;
+      
+      case 'userOffline':
+        this.users.update((users) =>
+          users.map((user) => (user.callSign === message.callSign ? { ...user, status: 'offline' } : user))
+        );
+        break;
+      
       default:
         console.warn(`Unhandled message type: ${message?.type}`);
     }
@@ -81,9 +121,18 @@ export class ChatService {
   }
 
   private updateUserList(message: { callSign: string; ip: string; port: string }) {
-    const existingUser = this.users().find(user => user.callSign === message.callSign);
+    const existingUser = this.users().find((user) => user.callSign === message.callSign);
     if (!existingUser) {
-      this.users.update(users => [...users, { callSign: message.callSign, ip: message.ip, port: message.port }]);
+      this.users.update((users) => [
+        ...users,
+        {
+          callSign: message.callSign,
+          ip: message.ip,
+          port: message.port,
+          address: `ws://${message.ip}:${message.port}`,
+          status: 'online',
+        },
+      ]);
       console.log(`✅ Added ${message.callSign} to the user list.`);
     } else {
       console.warn(`⚠️ User ${message.callSign} already exists in the list.`);

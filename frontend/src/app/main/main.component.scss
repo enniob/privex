@@ -105,3 +105,16 @@
 .full-width {
   width: 100%;
 }
+
+.online-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: 8px;
+  display: inline-block;
+  background-color: gray;
+}
+
+.online-indicator.online {
+  background-color: green;
+}

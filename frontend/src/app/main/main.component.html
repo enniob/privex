@@ -6,7 +6,8 @@
     <mat-card-content>
       <mat-list>
         <mat-list-item *ngFor="let user of users()" (click)="selectUser(user)">
-          {{ user.callSign }} ({{ user.ip }}:{{ user.port }})
+          {{ user.callSign }}
+          <span class="online-indicator" [ngClass]="{ online: user.status === 'online' }"></span>
         </mat-list-item>
       </mat-list>
       <button mat-raised-button color="primary" (click)="openAddUserDialog()">
